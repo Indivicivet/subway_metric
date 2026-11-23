@@ -42,10 +42,21 @@ jobs:
           osmium merge .cache/clip-*.osm.pbf -o .cache/london.osm.pbf
       - run: python scripts/build_city.py --city london
       - run: python scripts/build_city.py --city guangzhou
+      - name: Build mainland metro bundles
+        run: |
+          for city in zhengzhou shanghai chongqing chengdu beijing qingdao; do
+            python scripts/build_city.py --city "$city"
+          done
+          python scripts/build_city.py --city shenzhen --osm-extract .cache/guangzhou.osm.pbf
       - run: npm ci
       - run: npm run benchmark
       - run: npm run benchmark -- london
       - run: npm run benchmark -- guangzhou
+      - name: Check mainland metro bundles
+        run: |
+          for city in zhengzhou shanghai chongqing chengdu beijing qingdao shenzhen; do
+            npm run benchmark -- "$city"
+          done
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

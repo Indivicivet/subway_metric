@@ -404,13 +404,19 @@ async function openMap() {
 
 document.title = `Subway Metric · ${city.name}`;
 mapElement.setAttribute("aria-label", `Interactive ${city.name} travel time map`);
-document.querySelector(".city-switch").replaceChildren(...Object.entries(cities).map(([id, config]) => {
-  const link = document.createElement("a");
-  link.href = `?city=${id}`;
-  link.textContent = config.name;
-  if (id === cityId) link.setAttribute("aria-current", "page");
-  return link;
+const citySwitch = document.querySelector("#city-switch");
+citySwitch.replaceChildren(...Object.entries(cities).map(([id, config]) => {
+  const option = document.createElement("option");
+  option.value = id;
+  option.textContent = config.name;
+  return option;
 }));
+citySwitch.value = cityId;
+citySwitch.addEventListener("change", () => {
+  const url = new URL(location.href);
+  url.searchParams.set("city", citySwitch.value);
+  location.assign(url);
+});
 document.querySelector("#time-model").textContent = city.timeLabel ?? "Typical weekday";
 document.querySelector("#credits-link").href = `./data-sources.html#${cityId}`;
 showPrompt(`Loading ${city.name} routes…`);

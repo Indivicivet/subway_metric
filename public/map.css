@@ -35,16 +35,19 @@ main, #map { position: absolute; inset: 0; }
   padding: 11px 15px 11px 11px;
 }
 .identity strong { display: block; font-size: .98rem; letter-spacing: -.025em; }
-.city-switch { display: flex; gap: 3px; margin-top: 4px; }
-.city-switch a {
-  padding: 3px 6px;
+#city-switch {
+  display: block;
+  margin-top: 4px;
+  padding: 3px 24px 3px 6px;
+  border: 1px solid var(--line);
   border-radius: 4px;
-  color: var(--muted);
+  background: #f4f7f5;
+  color: #0d6053;
+  font: inherit;
   font-size: .81rem;
-  text-decoration: none;
+  cursor: pointer;
 }
-.city-switch a:hover { background: #edf4ef; }
-.city-switch [aria-current="page"] { background: #e0efe8; color: #0d6053; font-weight: 650; }
+#city-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .identity-icon {
   display: grid;
   align-content: center;
@@ -210,7 +213,7 @@ a { color: #146d5d; }
   .identity { top: 10px; left: 10px; padding: 7px; gap: 7px; }
   .identity-icon { width: 28px; height: 28px; padding: 5px; }
   .identity strong { font-size: .81rem; }
-  .city-switch a { font-size: .72rem; }
+  #city-switch { font-size: .72rem; }
   .trip { top: auto; bottom: 115px; left: 10px; width: min(286px, calc(100vw - 20px)); padding: 9px 11px; }
   .legend { bottom: 27px; left: 10px; width: min(286px, calc(100vw - 68px)); padding: 8px 10px; }
   .legend-heading strong { font-size: .82rem; }

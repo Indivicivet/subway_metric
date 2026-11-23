@@ -11,7 +11,48 @@ const meta = JSON.parse(await readFile(new URL(`${city}.json`, data), "utf8"));
 const bytes = gunzipSync(await readFile(new URL(`${city}.bin.gz`, data)));
 const graph = new RoutingGraph(meta, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 
-const points = city === "guangzhou" ? {
+const mainland = {
+  zhengzhou: {
+    points: { "Railway": [113.6500665, 34.7473938], "East": [113.7707911, 34.7601056], "University": [113.5360877, 34.8283818], "Medical": [113.636912, 34.7486919] },
+    trials: [["Railway", "East", "1"], ["Medical", "University", "1"]], home: "Railway",
+  },
+  shanghai: {
+    points: { "People's Square": [121.4709758, 31.234099], "Lujiazui": [121.4981186, 31.2401354], "Disney": [121.6645067, 31.143498], "Jiading North": [121.2323044, 31.3931194], "Huaqiao": [121.1003662, 31.3005465], "Hongqiao": [121.3143112, 31.1959576] },
+    trials: [["People's Square", "Lujiazui", "2"], ["Jiading North", "Disney", "11"], ["Huaqiao", "Disney", "11"], ["Hongqiao", "People's Square", "2"]], home: "People's Square",
+  },
+  chongqing: {
+    points: { "Lianglukou": [106.5445934, 29.55578], "Xiaoshizi": [106.5792561, 29.5617785], "Shapingba": [106.4554378, 29.5582503], "North Station": [106.5461941, 29.6096912], "Yudong": [106.5020191, 29.378642] },
+    trials: [["Lianglukou", "Xiaoshizi", "1"], ["Shapingba", "North Station", "环"], ["Lianglukou", "Yudong", "3"]], home: "Lianglukou",
+  },
+  chengdu: {
+    points: { "Tianfu Square": [104.0637962, 30.6598362], "East Station": [104.1375485, 30.6316093], "Weijianian": [104.0844471, 30.720173], "Science City": [104.0703492, 30.3939194], "Wugensong": [104.0791522, 30.5043235], "Jinshi": [104.086116, 30.5929701], "Zhujiang": [104.0053084, 30.5690335], "Longquanyi South": [104.1941553, 30.5957903], "Shuangliu T2 East": [103.9560228, 30.5716274] },
+    trials: [["Tianfu Square", "East Station", "2"], ["Weijianian", "Science City", "1"], ["Tianfu Square", "Wugensong", "1"], ["Jinshi", "Zhujiang", "30"], ["Longquanyi South", "Shuangliu T2 East", "30"]], home: "Weijianian",
+  },
+  beijing: {
+    points: { "Tiananmen East": [116.3949205, 39.9062701], "Guomao": [116.4532958, 39.9069856], "Xizhimen": [116.3492602, 39.9391324], "South Station": [116.3728993, 39.8635282], "Universal": [116.6735171, 39.8479277] },
+    trials: [["Tiananmen East", "Guomao", "1"], ["Xizhimen", "South Station", "4"], ["Guomao", "Universal", "1"]], home: "Tiananmen East",
+  },
+  qingdao: {
+    points: { "May Fourth": [120.3753084, 36.0646098], "Wangjiagang": [120.1573134, 35.9422808], "Airport": [120.0892746, 36.3592275], "Miaoling": [120.4602413, 36.1004171] },
+    trials: [["May Fourth", "Airport", "8"], ["May Fourth", "Miaoling", "2"], ["May Fourth", "Wangjiagang"]], home: "May Fourth",
+  },
+  shenzhen: {
+    points: { "Science Museum": [114.0897624, 22.5431472], "Window": [113.9692595, 22.5397676], "Futian": [114.0641051, 22.5184704], "North Station": [114.0252952, 22.6131652], "Chiwan": [113.8926904, 22.4823959] },
+    trials: [["Science Museum", "Window", "1"], ["Futian", "North Station", "4"], ["Window", "Chiwan", "2;8"]], home: "Science Museum",
+  },
+};
+if (mainland[city]) {
+  assert.ok(meta.stations.length > 0);
+  assert.ok(meta.stations.every(({ name }) => /\p{Script=Han}/u.test(name)), "Stations need Chinese names");
+  assert.equal(Object.keys(meta.lines).length, { zhengzhou: 13, shanghai: 20, chongqing: 13, chengdu: 17, beijing: 26, qingdao: 8, shenzhen: 16 }[city]);
+}
+if (city === "beijing") assert.equal(meta.stations.filter(({ line }) => line === "18").length, 11);
+if (city === "chengdu") {
+  const line30 = meta.stations.filter(({ line }) => line === "30");
+  assert.equal(line30.length, 22);
+  assert.ok(line30.every(({ name }) => !/玉虹路|分水/.test(name)));
+}
+const points = mainland[city]?.points ?? (city === "guangzhou" ? {
   "Guangzhou South": [113.2644761, 22.9917775],
   "Guangzhou Railway": [113.251255, 23.1510751],
   "Tiyu Xilu": [113.3161772, 23.1335002],
@@ -47,14 +88,14 @@ const points = city === "guangzhou" ? {
   "Nangang": [121.60646, 25.05219],
   "Xinzhuang": [121.45089, 25.0361],
   "Nanjing Fuxing": [121.5442, 25.05178],
-};
+});
 const snaps = Object.fromEntries(Object.entries(points).map(([name, point]) => {
   const snap = graph.snap(point);
   assert.ok(snap, `No walking network at ${name}`);
   return [name, snap];
 }));
 
-const trials = city === "guangzhou" ? [
+const trials = mainland[city]?.trials ?? (city === "guangzhou" ? [
   ["Guangzhou South", "Guangzhou Railway", "2"],
   ["Tiyu Xilu", "Airport North", "3"],
   ["Linhexi", "Canton Tower"],
@@ -72,7 +113,7 @@ const trials = city === "guangzhou" ? [
   ["Taipei 101", "Dapinglin"],
   ["Dingpu", "Tamsui"],
   ["Taipei Main", "Chiang Kai-shek Memorial Hall"],
-];
+]);
 if (city === "london") assert.equal(Object.keys(meta.lines).length, 11);
 if (city === "guangzhou") assert.equal(Object.keys(meta.lines).length, 19);
 for (const [from, to, line] of trials) {
@@ -87,7 +128,7 @@ for (const [from, to, line] of trials) {
   console.log(`${from} → ${to}: ${(trip.total / 60).toFixed(1)} min, ${trip.legs.map((leg) => leg.line).join(" + ") || "walk"}`);
 }
 
-const home = { taipei: "Taipei Main", london: "Charing Cross", guangzhou: "Zhujiang New Town" }[city];
+const home = mainland[city]?.home ?? { taipei: "Taipei Main", london: "Charing Cross", guangzhou: "Zhujiang New Town" }[city];
 graph.solve(snaps[home]);
 const nearby = [points[home][0] + 0.00008, points[home][1]];
 const localTrip = graph.route(graph.snap(nearby));
