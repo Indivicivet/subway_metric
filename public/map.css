@@ -1,0 +1,215 @@
+:root {
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  color: #183334;
+  background: #edf0eb;
+  font-synthesis: none;
+  --surface: #fffffff5;
+  --line: #d8e3de;
+  --muted: #506461;
+  --accent: #087e69;
+  --shadow: 0 4px 18px #203a3420;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+main, #map { position: absolute; inset: 0; }
+#map { background: #ecf0e8; }
+#map canvas { cursor: crosshair; }
+#map.maplibregl-map .maplibregl-canvas-container.maplibregl-interactive:active canvas { cursor: grabbing; }
+
+.identity, .panel {
+  position: absolute;
+  z-index: 1;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.identity {
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 15px 11px 11px;
+  pointer-events: none;
+}
+.identity strong { display: block; font-size: .98rem; letter-spacing: -.025em; }
+.city { display: block; color: var(--muted); font-size: .81rem; margin-top: 1px; }
+.city span { margin-left: 3px; }
+.identity-icon {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  width: 34px;
+  height: 34px;
+  background: #0b514e;
+  border-radius: 8px;
+  padding: 6px;
+}
+.identity-icon i {
+  height: 2px;
+  border-radius: 2px;
+  background: #b5edb3;
+  position: relative;
+}
+.identity-icon i:nth-child(2) { background: #f4d67a; }
+.identity-icon i:nth-child(3) { background: #ef9b83; }
+.identity-icon i::after {
+  content: "";
+  position: absolute;
+  inset: -2px 5px auto auto;
+  height: 6px;
+  width: 6px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: inherit;
+}
+.identity-icon i:nth-child(2)::after { right: 12px; }
+
+.trip {
+  top: 20px;
+  right: 20px;
+  width: min(308px, calc(100vw - 40px));
+  max-height: calc(100dvh - 100px);
+  overflow: auto;
+  padding: 15px 16px;
+}
+.trip-heading {
+  min-height: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+.mode {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #17665b;
+  font-size: .875rem;
+  font-weight: 650;
+}
+.mode-dot { background: #159d80; height: 8px; width: 8px; border-radius: 50%; }
+.trip.pinned .mode-dot { background: #143e42; }
+button, summary { font: inherit; cursor: pointer; }
+button:focus-visible, summary:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+button {
+  padding: 4px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: #f4f7f5;
+  color: #224744;
+  font-size: .8rem;
+}
+button:hover { background: #e6f1eb; }
+kbd { font-family: inherit; font-size: .68rem; color: var(--muted); margin-left: 4px; }
+.origin-label {
+  margin-top: 11px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  font-size: .875rem;
+  font-weight: 620;
+}
+.prompt, .destination { margin: 5px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
+.origin-label:not([hidden]) + #trip-result .prompt { margin-top: 8px; }
+.total {
+  margin-top: 9px;
+  font-size: 2.65rem;
+  line-height: 1;
+  font-weight: 720;
+  letter-spacing: -.07em;
+  font-variant-numeric: tabular-nums;
+}
+.minutes { font-size: 1rem; letter-spacing: 0; color: var(--muted); font-weight: 550; }
+.destination { color: #294b49; }
+.breakdown {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  margin: 12px 0 0;
+  font-size: .85rem;
+}
+.breakdown div { display: contents; }
+.breakdown dt { color: var(--muted); }
+.breakdown dd { margin: 0; font-weight: 670; font-variant-numeric: tabular-nums; }
+.lines-used {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  font-size: .79rem;
+}
+.lines-used:empty { display: none; }
+.lines-used li { display: flex; align-items: baseline; gap: 7px; }
+.line-code {
+  background: var(--line-color);
+  color: white;
+  padding: 1px 5px;
+  border-radius: 4px;
+  min-width: 21px;
+  font-weight: 700;
+  text-align: center;
+  flex: none;
+}
+
+.legend {
+  left: 20px;
+  bottom: 28px;
+  width: min(308px, calc(100vw - 76px));
+  padding: 13px 15px;
+}
+.legend-heading { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.legend-heading strong { font-size: .89rem; }
+.legend-heading span { color: var(--muted); font-size: .79rem; }
+.bands, .ticks { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.bands { height: 10px; border-radius: 3px; overflow: hidden; margin-top: 9px; }
+.bands i:nth-child(1) { background: #63c6ac; }
+.bands i:nth-child(2) { background: #a3d8b7; }
+.bands i:nth-child(3) { background: #cadf9f; }
+.bands i:nth-child(4) { background: #f2dc9a; }
+.bands i:nth-child(5) { background: #f0bc94; }
+.bands i:nth-child(6) { background: #dea69f; }
+.bands i:nth-child(7) { background: #cdc0d1; }
+.ticks { margin-top: 3px; color: #435855; font-size: .76rem; font-variant-numeric: tabular-nums; }
+.ticks span { padding-left: 2px; }
+.credits { margin-top: 7px; font-size: .77rem; color: var(--muted); }
+.credits p { line-height: 1.45; margin: 6px 0 0; }
+a { color: #146d5d; }
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl-attrib { color: #344b48; }
+.sources { max-width: 46rem; margin: 0 auto; padding: 2rem 1.25rem; line-height: 1.55; }
+.sources h1 { line-height: 1.15; letter-spacing: -.035em; }
+.sources h2 { margin-bottom: .25rem; font-size: 1.15rem; }
+.sources p { margin-top: .5rem; }
+.sources li + li { margin-top: .4rem; }
+
+#map-status {
+  position: absolute;
+  z-index: 1;
+  left: 20px;
+  top: 91px;
+  background: var(--surface);
+  padding: 6px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  font-size: .8rem;
+}
+
+@media (max-width: 700px) {
+  .identity { top: 10px; left: 10px; padding: 7px; gap: 7px; }
+  .identity-icon { width: 28px; height: 28px; padding: 5px; }
+  .identity strong { font-size: .81rem; }
+  .city { font-size: .72rem; }
+  .trip { top: auto; bottom: 115px; left: 10px; width: min(286px, calc(100vw - 20px)); padding: 9px 11px; }
+  .legend { bottom: 27px; left: 10px; width: min(286px, calc(100vw - 68px)); padding: 8px 10px; }
+  .legend-heading strong { font-size: .82rem; }
+  .legend-heading span { font-size: .73rem; }
+  .credits { margin-top: 4px; }
+  .trip.pinned { bottom: 115px; }
+  .total { font-size: 2rem; }
+  kbd { display: none; }
+}
