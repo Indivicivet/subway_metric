@@ -4,7 +4,7 @@ export const WAIT = 2;
 export const RIDE = 3;
 export const TRANSFER = 4;
 export const ALIGHT = 5;
-const UNREACHED = 0xffffffff;
+export const UNREACHED = 0xffffffff;
 const BUCKET_METERS = 150;
 const HEAT_COLORS = [
   [20, 170, 131, 136],
@@ -237,17 +237,20 @@ export class RoutingGraph {
     }
   }
 
+  cellCost(cell) {
+    const road = this.cells[cell] * 4;
+    return Math.min(
+      this.distances[this.roads[road]] + this.cellCosts[2 * cell],
+      this.distances[this.roads[road + 1]] + this.cellCosts[2 * cell + 1],
+    );
+  }
+
   heatmap() {
     const rgba = new Uint8ClampedArray(this.cells.length * 4);
-    const { cells, cellCosts, roads, distances } = this;
+    const { cells } = this;
     for (let c = 0; c < cells.length; c++) {
       if (cells[c] === UNREACHED) continue;
-      const road = cells[c] * 4;
-      const cost = Math.min(
-        distances[roads[road]] + cellCosts[2 * c],
-        distances[roads[road + 1]] + cellCosts[2 * c + 1],
-      );
-      const color = HEAT_COLORS[Math.min(6, Math.floor(cost / 6000))];
+      const color = HEAT_COLORS[Math.min(6, Math.floor(this.cellCost(c) / 6000))];
       const index = c * 4;
       rgba[index] = color[0];
       rgba[index + 1] = color[1];

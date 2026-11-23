@@ -288,6 +288,19 @@ function addLayers() {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 1.5, 15, 4],
     },
   });
+  map.addSource("centerpoints", {
+    type: "geojson",
+    data: collection(meta.centerpoints.map(({ coordinates }, index) => feature(
+      "Point", coordinates, { color: ["#bd8b0b", "#758396", "#ae6036"][index] },
+    ))),
+  });
+  map.addLayer({
+    id: "centerpoint-rings", type: "circle", source: "centerpoints",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 5.5, 14, 8.5],
+      "circle-opacity": 0, "circle-stroke-width": 2.5, "circle-stroke-color": ["get", "color"],
+    },
+  });
   if (map.getStyle().glyphs) {
     map.addLayer({
       id: "station-labels", type: "symbol", source: "stations", minzoom: 13.35,

@@ -1,5 +1,6 @@
-import { access, cp, mkdir } from "node:fs/promises";
+import { access, cp, mkdir, writeFile } from "node:fs/promises";
 import { cities } from "../src/cities.js";
+import { loadRankedCity } from "./centerpoints.mjs";
 
 const root = new URL("../", import.meta.url);
 const output = new URL("dist/", root);
@@ -18,3 +19,8 @@ await Promise.all([
   )),
   cp(new URL("node_modules/maplibre-gl/LICENSE.txt", root), new URL("vendor/LICENSE.txt", output)),
 ]);
+for (const city of Object.keys(cities)) {
+  const meta = await loadRankedCity(city);
+  await writeFile(new URL(`data/${city}.json`, output), JSON.stringify(meta));
+  console.log(`${cities[city].name}: ${meta.centerpoints.map(({ name }) => name).join(", ")}`);
+}
