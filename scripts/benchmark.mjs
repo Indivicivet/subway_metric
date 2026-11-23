@@ -4,11 +4,26 @@ import { gunzipSync } from "node:zlib";
 import { RoutingGraph } from "../src/routing.js";
 
 const data = new URL("../public/data/", import.meta.url);
-const meta = JSON.parse(await readFile(new URL("taipei.json", data), "utf8"));
-const bytes = gunzipSync(await readFile(new URL("taipei.bin.gz", data)));
+const city = process.argv[2] ?? "taipei";
+assert.ok(city === "taipei" || city === "london", "Choose taipei or london");
+const meta = JSON.parse(await readFile(new URL(`${city}.json`, data), "utf8"));
+const bytes = gunzipSync(await readFile(new URL(`${city}.bin.gz`, data)));
 const graph = new RoutingGraph(meta, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 
-const points = {
+const points = city === "london" ? {
+  "Bank": [-0.088, 51.5132],
+  "Waterloo": [-0.1133, 51.5029],
+  "Baker Street": [-0.1564, 51.5231],
+  "Chesham": [-0.6111, 51.7052],
+  "Epping": [0.1141, 51.6937],
+  "Heathrow Terminal 5": [-0.49056, 51.470052],
+  "Acton Town": [-0.2803, 51.503],
+  "Battersea Power Station": [-0.1422, 51.4799],
+  "Stratford": [-0.0058, 51.5415],
+  "Upminster": [0.2511, 51.559],
+  "King's Cross St Pancras": [-0.1237, 51.5308],
+  "Charing Cross": [-0.1276, 51.508],
+} : {
   "Taipei Main": [121.517, 25.0468],
   "Taipei 101": [121.56453, 25.03307],
   "Chiang Kai-shek Memorial Hall": [121.51805, 25.03165],
@@ -28,25 +43,36 @@ const snaps = Object.fromEntries(Object.entries(points).map(([name, point]) => {
   return [name, snap];
 }));
 
-for (const [from, to] of [
+const trials = city === "london" ? [
+  ["Bank", "Waterloo", "waterloo-city"],
+  ["Baker Street", "Chesham", "metropolitan"],
+  ["Epping", "Bank", "central"],
+  ["Heathrow Terminal 5", "Acton Town", "piccadilly"],
+  ["Battersea Power Station", "Waterloo", "northern"],
+  ["Upminster", "Stratford", "district"],
+] : [
   ["Taipei Main", "Taipei 101"],
   ["Taipei Main", "Banqiao"],
   ["Taipei 101", "Dapinglin"],
   ["Dingpu", "Tamsui"],
   ["Taipei Main", "Chiang Kai-shek Memorial Hall"],
-]) {
+];
+if (city === "london") assert.equal(Object.keys(meta.lines).length, 11);
+for (const [from, to, line] of trials) {
   graph.solve(snaps[from]);
   const trip = graph.route(snaps[to]);
   assert.ok(trip, `No route from ${from} to ${to}`);
   assert.ok(trip.legs.length);
+  if (line) assert.ok(trip.legs.some((leg) => leg.line === line), `Missing ${line} on ${from} → ${to}`);
   const summed = Object.values(trip.times).reduce((sum, time) => sum + time, 0);
   assert.ok(Math.abs(summed - trip.total) < 0.001, "Legs must add up to total time");
   assert.ok(trip.features.every(({ geometry }) => geometry.coordinates.length >= 2));
   console.log(`${from} → ${to}: ${(trip.total / 60).toFixed(1)} min, ${trip.legs.map((leg) => leg.line).join(" + ") || "walk"}`);
 }
 
-graph.solve(snaps["Taipei Main"]);
-const nearby = [points["Taipei Main"][0] + 0.00008, points["Taipei Main"][1]];
+const home = city === "london" ? "Charing Cross" : "Taipei Main";
+graph.solve(snaps[home]);
+const nearby = [points[home][0] + 0.00008, points[home][1]];
 const localTrip = graph.route(graph.snap(nearby));
 assert.ok(localTrip?.times.walk < 60);
 assert.equal(localTrip.legs.length, 0);

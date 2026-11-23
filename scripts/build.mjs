@@ -2,7 +2,11 @@ import { access, cp, mkdir } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 const output = new URL("dist/", root);
-await access(new URL("public/data/taipei.bin.gz", root));
+await Promise.all(
+  ["taipei", "london"].flatMap((city) => ["json", "bin.gz"].map(
+    (extension) => access(new URL(`public/data/${city}.${extension}`, root)),
+  )),
+);
 await mkdir(new URL("vendor/", output), { recursive: true });
 await Promise.all([
   cp(new URL("public/", root), output, { recursive: true }),

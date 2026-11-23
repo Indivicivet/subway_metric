@@ -2,6 +2,7 @@ import { RoutingGraph } from "./routing.js";
 
 let graph;
 let pinned;
+const city = new URL(import.meta.url).searchParams.get("city");
 
 async function data(file) {
   const response = await fetch(new URL(`../data/${file}`, import.meta.url));
@@ -12,8 +13,8 @@ async function data(file) {
 async function load() {
   const started = performance.now();
   const [meta, buffer] = await Promise.all([
-    data("taipei.json").then((response) => response.json()),
-    data("taipei.bin.gz").then((response) => new Response(
+    data(`${city}.json`).then((response) => response.json()),
+    data(`${city}.bin.gz`).then((response) => new Response(
       response.body.pipeThrough(new DecompressionStream("gzip")),
     ).arrayBuffer()),
   ]);

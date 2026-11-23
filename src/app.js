@@ -1,7 +1,7 @@
 import { Map as MapView, NavigationControl, setWorkerUrl } from "../vendor/maplibre-gl.js";
+import { city, cityId } from "./cities.js";
 
 const BASEMAP = "https://tiles.openfreemap.org/styles/positron";
-const FIRST_ORIGIN = [121.517, 25.0468];
 const EMPTY = { type: "FeatureCollection", features: [] };
 const PREVIEW_METERS = 32;
 const mapElement = document.querySelector("#map");
@@ -16,7 +16,9 @@ const legs = document.querySelector("#lines-used");
 const canvas = document.createElement("canvas");
 const ctx = canvas.getContext("2d");
 const touch = matchMedia("(hover: none)");
-const worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
+const workerUrl = new URL("./worker.js", import.meta.url);
+workerUrl.searchParams.set("city", cityId);
+const worker = new Worker(workerUrl, { type: "module" });
 let map;
 let meta;
 let mapReady = false;
@@ -77,7 +79,7 @@ function showRoute(route, point) {
   const station = nearby(point);
   document.querySelector("#destination").textContent = station ? `To near ${station}` : "To the point on the map";
   const labels = {
-    walk: "Walk", to: "Walk to MRT", wait: "Wait for trains", ride: "MRT ride",
+    walk: "Walk", to: `Walk to ${city.mode}`, wait: "Wait for trains", ride: `${city.mode} ride`,
     transfer: "Walk between trains", from: "Walk to destination",
   };
   breakdown.replaceChildren(...Object.entries(route.times)
@@ -96,7 +98,7 @@ function showRoute(route, point) {
     const code = document.createElement("span");
     code.className = "line-code";
     code.style.setProperty("--line-color", meta.lines[line].color);
-    code.textContent = line;
+    code.textContent = cityId === "london" ? meta.lines[line].name : line;
     code.title = meta.lines[line].name;
     item.append(code, `${board} → ${alight}`);
     return item;
@@ -178,7 +180,7 @@ function resume() {
   originLabel.hidden = true;
   map.setPaintProperty("origin-dot", "circle-color", "#078572");
   showPrompt("Hover to explore. Click to pin an origin.");
-  areaAt(pointer && isCovered(pointer) ? pointer : FIRST_ORIGIN);
+  areaAt(pointer && isCovered(pointer) ? pointer : city.start);
 }
 
 function routeAt(point) {
@@ -326,7 +328,7 @@ function setupWhenReady() {
   addLayers();
   registerInteractions();
   showPrompt(touch.matches ? "Tap the map to pin an origin." : "Hover to explore. Click to pin an origin.");
-  areaAt(FIRST_ORIGIN);
+  areaAt(city.start);
 }
 
 function fail(message) {
@@ -362,11 +364,11 @@ worker.addEventListener("message", ({ data }) => {
     fail(data.message);
   }
 });
-worker.addEventListener("error", () => fail("The Taipei routing worker could not start."));
+worker.addEventListener("error", () => fail(`The ${city.name} routing worker could not start.`));
 
 async function openMap() {
   let style;
-  let credits = '<a href="./data-sources.html">MRT data</a>';
+  let credits = `<a href="./data-sources.html#${cityId}">${city.credit}</a>`;
   try {
     const response = await fetch(BASEMAP, { signal: AbortSignal.timeout(7500) });
     if (!response.ok) throw new Error(`Basemap returned ${response.status}`);
@@ -384,7 +386,7 @@ async function openMap() {
   setWorkerUrl(new URL("../vendor/maplibre-gl-worker.js", import.meta.url).href);
   map = new MapView({
     container: mapElement, style,
-    bounds: [[121.418, 24.956], [121.631, 25.174]],
+    bounds: city.view,
     fitBoundsOptions: { padding: { top: 65, right: 50, bottom: 45, left: 50 } },
     minZoom: 9.5, maxZoom: 18, dragRotate: false, pitchWithRotate: false,
     attributionControl: { customAttribution: credits },
@@ -397,4 +399,9 @@ async function openMap() {
   });
 }
 
+document.title = `Subway Metric · ${city.name}`;
+mapElement.setAttribute("aria-label", `Interactive ${city.name} travel time map`);
+document.querySelector(`.city-switch [data-city="${cityId}"]`).setAttribute("aria-current", "page");
+document.querySelector("#credits-link").href = `./data-sources.html#${cityId}`;
+showPrompt(`Loading ${city.name} routes…`);
 openMap().catch(() => fail("The map could not start. Try a browser with WebGL enabled."));

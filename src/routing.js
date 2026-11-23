@@ -188,10 +188,13 @@ export class RoutingGraph {
 
   solve(origin, limit = UNREACHED) {
     const { distances, previousNode, previousEdge, offsets, targets, costs, roads, queue } = this;
+    const trace = limit === UNREACHED;
     this.start = origin;
     distances.fill(UNREACHED);
-    previousNode.fill(-1);
-    previousEdge.fill(-1);
+    if (trace) {
+      previousNode.fill(-1);
+      previousEdge.fill(-1);
+    }
     queue.reset();
     const flags = roads[origin.road + 2];
     if (flags & 2 || origin.fraction === 0) {
@@ -215,8 +218,10 @@ export class RoutingGraph {
         const next = cost + costs[edge];
         if (next >= distances[to] || next > limit) continue;
         distances[to] = next;
-        previousNode[to] = from;
-        previousEdge[to] = edge;
+        if (trace) {
+          previousNode[to] = from;
+          previousEdge[to] = edge;
+        }
         queue.push(to, next);
       }
     }
