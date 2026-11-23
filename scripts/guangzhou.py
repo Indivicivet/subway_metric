@@ -55,12 +55,16 @@ def coordinates(extract: Path, stop_ids, track_ids):
         if obj.is_node():
             if obj.id in stop_ids:
                 tags = obj.tags
-                name = tags.get("name:zh") or tags.get("name")
+                name = (
+                    tags.get("name:zh-Hans") or tags.get("name:zh") or tags.get("name")
+                )
                 if name:
+                    name = name.removesuffix("站")
+                    english = tags.get("name:en")
                     nodes[obj.id] = (
                         AREA.project(obj.lon, obj.lat),
-                        name.removesuffix("站"),
-                        tags.get("name:en") or name,
+                        name,
+                        f"{english} ({name})" if english and english != name else name,
                     )
             if obj.tags.get("railway") == "subway_entrance" and obj.tags.get(
                 "access"

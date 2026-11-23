@@ -158,7 +158,15 @@ def station_data(cache: Path, patterns, convert, paths):
                     if name == "台北車"
                     else station.get("name:en")
                 )
-                stations[line, name] = (xy, english or name)
+                chinese = station["name"]
+                stations[line, name] = (
+                    xy,
+                    (
+                        f"{english} ({chinese})"
+                        if english and english != chinese
+                        else chinese
+                    ),
+                )
     return stations
 
 
