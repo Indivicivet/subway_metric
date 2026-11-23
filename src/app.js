@@ -1,7 +1,10 @@
 import { Map as MapView, NavigationControl, setWorkerUrl } from "../vendor/maplibre-gl.js";
-import { city, cityId } from "./cities.js";
+import { cities, defaultCity } from "./cities.js";
 
 const BASEMAP = "https://tiles.openfreemap.org/styles/positron";
+const requested = new URLSearchParams(location.search).get("city");
+const cityId = Object.hasOwn(cities, requested) ? requested : defaultCity;
+const city = cities[cityId];
 const EMPTY = { type: "FeatureCollection", features: [] };
 const PREVIEW_METERS = 32;
 const mapElement = document.querySelector("#map");
@@ -98,7 +101,7 @@ function showRoute(route, point) {
     const code = document.createElement("span");
     code.className = "line-code";
     code.style.setProperty("--line-color", meta.lines[line].color);
-    code.textContent = cityId === "london" ? meta.lines[line].name : line;
+    code.textContent = city.shortLineLabels ? line : meta.lines[line].name;
     code.title = meta.lines[line].name;
     item.append(code, `${board} → ${alight}`);
     return item;
@@ -388,7 +391,7 @@ async function openMap() {
     container: mapElement, style,
     bounds: city.view,
     fitBoundsOptions: { padding: { top: 65, right: 50, bottom: 45, left: 50 } },
-    minZoom: 9.5, maxZoom: 18, dragRotate: false, pitchWithRotate: false,
+    minZoom: city.minZoom ?? 9.5, maxZoom: 18, dragRotate: false, pitchWithRotate: false,
     attributionControl: { customAttribution: credits },
   });
   map.touchZoomRotate.disableRotation();
@@ -401,7 +404,14 @@ async function openMap() {
 
 document.title = `Subway Metric · ${city.name}`;
 mapElement.setAttribute("aria-label", `Interactive ${city.name} travel time map`);
-document.querySelector(`.city-switch [data-city="${cityId}"]`).setAttribute("aria-current", "page");
+document.querySelector(".city-switch").replaceChildren(...Object.entries(cities).map(([id, config]) => {
+  const link = document.createElement("a");
+  link.href = `?city=${id}`;
+  link.textContent = config.name;
+  if (id === cityId) link.setAttribute("aria-current", "page");
+  return link;
+}));
+document.querySelector("#time-model").textContent = city.timeLabel ?? "Typical weekday";
 document.querySelector("#credits-link").href = `./data-sources.html#${cityId}`;
 showPrompt(`Loading ${city.name} routes…`);
 openMap().catch(() => fail("The map could not start. Try a browser with WebGL enabled."));

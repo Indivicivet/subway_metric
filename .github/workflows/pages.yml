@@ -41,9 +41,11 @@ jobs:
           done
           osmium merge .cache/clip-*.osm.pbf -o .cache/london.osm.pbf
       - run: python scripts/build_city.py --city london
+      - run: python scripts/build_city.py --city guangzhou
       - run: npm ci
       - run: npm run benchmark
       - run: npm run benchmark -- london
+      - run: npm run benchmark -- guangzhou
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

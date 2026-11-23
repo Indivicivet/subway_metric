@@ -81,7 +81,9 @@ export class RoutingGraph {
     for (const cost of this.costs) maxCost = Math.max(maxCost, cost);
     // Integer costs let the queue recycle buckets after one maximum edge cost.
     // The first two entries can also include the offset from the map to a road.
-    this.queue = new CostQueue(edges + 2, maxCost + Math.ceil(meta.snapMeters * meta.walkCost));
+    this.queue = new CostQueue(edges + 2, maxCost + Math.ceil(
+      (meta.stationSnapMeters ?? meta.snapMeters) * meta.walkCost,
+    ));
     this.roadBuckets = new Map();
     this.cellCosts = new Uint32Array(cells * 2);
     this.indexRoads();
@@ -137,9 +139,8 @@ export class RoutingGraph {
     return { road, fraction, px, py, distanceSquared };
   }
 
-  snap(point) {
+  snap(point, limit = this.meta.snapMeters) {
     const [x, y] = this.project(point);
-    const limit = this.meta.snapMeters;
     let closest = null;
     let bestDistance = limit * limit;
     for (let i = Math.floor((x - limit) / BUCKET_METERS); i <= Math.floor((x + limit) / BUCKET_METERS); i++) {
@@ -153,7 +154,16 @@ export class RoutingGraph {
         }
       }
     }
-    if (closest === null) return null;
+    if (closest === null) {
+      const { stationSnapMeters, stations } = this.meta;
+      if (stationSnapMeters > limit && stations.some(({ coordinates }) => {
+        const [sx, sy] = this.project(coordinates);
+        return (x - sx) ** 2 + (y - sy) ** 2 <= 60 ** 2;
+      })) {
+        return this.snap(point, stationSnapMeters);
+      }
+      return null;
+    }
     const offset = Math.round(Math.sqrt(bestDistance) * this.meta.walkCost);
     const cost = this.roads[closest.road + 3];
     return {

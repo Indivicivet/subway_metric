@@ -1,16 +1,27 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
+import { cities, defaultCity } from "../src/cities.js";
 import { RoutingGraph } from "../src/routing.js";
 
 const data = new URL("../public/data/", import.meta.url);
-const city = process.argv[2] ?? "taipei";
-assert.ok(city === "taipei" || city === "london", "Choose taipei or london");
+const city = process.argv[2] ?? defaultCity;
+assert.ok(Object.hasOwn(cities, city), "Choose a registered city");
 const meta = JSON.parse(await readFile(new URL(`${city}.json`, data), "utf8"));
 const bytes = gunzipSync(await readFile(new URL(`${city}.bin.gz`, data)));
 const graph = new RoutingGraph(meta, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 
-const points = city === "london" ? {
+const points = city === "guangzhou" ? {
+  "Guangzhou South": [113.2644761, 22.9917775],
+  "Guangzhou Railway": [113.251255, 23.1510751],
+  "Tiyu Xilu": [113.3161772, 23.1335002],
+  "Airport North": [113.2996781, 23.3979662],
+  "Canton Tower": [113.3183998, 23.1093065],
+  "Linhexi": [113.317584, 23.1430258],
+  "Zhujiang New Town": cities.guangzhou.start,
+  "Wanshengwei": [113.3789337, 23.1000758],
+  "Panyu Square": [113.3799046, 22.9382819],
+} : city === "london" ? {
   "Bank": [-0.088, 51.5132],
   "Waterloo": [-0.1133, 51.5029],
   "Baker Street": [-0.1564, 51.5231],
@@ -43,7 +54,12 @@ const snaps = Object.fromEntries(Object.entries(points).map(([name, point]) => {
   return [name, snap];
 }));
 
-const trials = city === "london" ? [
+const trials = city === "guangzhou" ? [
+  ["Guangzhou South", "Guangzhou Railway", "2"],
+  ["Tiyu Xilu", "Airport North", "3"],
+  ["Linhexi", "Canton Tower"],
+  ["Wanshengwei", "Panyu Square"],
+] : city === "london" ? [
   ["Bank", "Waterloo", "waterloo-city"],
   ["Baker Street", "Chesham", "metropolitan"],
   ["Epping", "Bank", "central"],
@@ -58,6 +74,7 @@ const trials = city === "london" ? [
   ["Taipei Main", "Chiang Kai-shek Memorial Hall"],
 ];
 if (city === "london") assert.equal(Object.keys(meta.lines).length, 11);
+if (city === "guangzhou") assert.equal(Object.keys(meta.lines).length, 19);
 for (const [from, to, line] of trials) {
   graph.solve(snaps[from]);
   const trip = graph.route(snaps[to]);
@@ -70,7 +87,7 @@ for (const [from, to, line] of trials) {
   console.log(`${from} → ${to}: ${(trip.total / 60).toFixed(1)} min, ${trip.legs.map((leg) => leg.line).join(" + ") || "walk"}`);
 }
 
-const home = city === "london" ? "Charing Cross" : "Taipei Main";
+const home = { taipei: "Taipei Main", london: "Charing Cross", guangzhou: "Zhujiang New Town" }[city];
 graph.solve(snaps[home]);
 const nearby = [points[home][0] + 0.00008, points[home][1]];
 const localTrip = graph.route(graph.snap(nearby));

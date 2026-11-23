@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#f9faf7">
-    <meta name="description" content="Explore typical subway and walking times across Taipei and London.">
+    <meta name="description" content="Explore typical subway and walking times in major cities.">
     <title>Subway Metric</title>
     <link rel="stylesheet" href="./vendor/maplibre-gl.css">
     <link rel="stylesheet" href="./map.css">
@@ -18,10 +18,7 @@
         <span class="identity-icon" aria-hidden="true"><i></i><i></i><i></i></span>
         <div>
           <strong>Subway Metric</strong>
-          <nav class="city-switch" aria-label="City">
-            <a data-city="taipei" href="?city=taipei">Taipei</a>
-            <a data-city="london" href="?city=london">London</a>
-          </nav>
+          <nav class="city-switch" aria-label="City"></nav>
         </div>
       </header>
 
@@ -45,7 +42,7 @@
       <section class="legend panel" aria-label="Travel time scale">
         <div class="legend-heading">
           <strong>Travel time (min)</strong>
-          <span>Typical weekday</span>
+          <span id="time-model"></span>
         </div>
         <div class="bands" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="ticks" aria-label="0 to 60 minutes, then 60 or more">

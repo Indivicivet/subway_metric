@@ -294,6 +294,7 @@ def build_bundle(
     services: list[TrainPattern],
     transfer_overrides,
     transfer_seconds: int,
+    station_snap_meters: int = SNAP_METERS,
 ):
     started = time.perf_counter()
     street_xy, roads = read_streets(area, cache, extract)
@@ -331,6 +332,7 @@ def build_bundle(
     platforms = {key: node(value[0]) for key, value in stations.items()}
     entrances_used = set()
     fallback_entrances = []
+    unlinked_stations = []
     for (line, stop), platform in platforms.items():
         point, label = stations[line, stop]
         candidates = entrances.get((line, stop), [])
@@ -342,7 +344,7 @@ def build_bundle(
             road_id = int(tree.nearest(target))
             segment = tree.geometries[road_id]
             offset = segment.distance(target)
-            if offset > SNAP_METERS:
+            if offset > (SNAP_METERS if number else station_snap_meters):
                 continue
             a, b, flags, cost = map(int, roads[road_id])
             fraction = segment.project(target, normalized=True)
@@ -364,7 +366,9 @@ def build_bundle(
                 fallback_entrances.append(label)
             connected = True
         if not connected:
-            raise ValueError(f"No walking connection for {area.id} {line} {label}")
+            if station_snap_meters == SNAP_METERS:
+                raise ValueError(f"No walking connection for {area.id} {line} {label}")
+            unlinked_stations.append(label)
     del tree
 
     groups = defaultdict(list)
@@ -459,6 +463,7 @@ def build_bundle(
         "entrancesUsed": len(entrances_used),
         "estimatedTrackLinks": fallback_tracks,
         "estimatedEntrances": sorted(set(fallback_entrances)),
+        "unlinkedStations": sorted(set(unlinked_stations)),
     }
     metadata = {
         "origin": area.origin,
@@ -467,6 +472,7 @@ def build_bundle(
         "grid": grid,
         "walkCost": WALK_COST,
         "snapMeters": SNAP_METERS,
+        "stationSnapMeters": station_snap_meters,
         "lines": {
             code: {"name": name, "color": color}
             for code, (name, color) in lines.items()

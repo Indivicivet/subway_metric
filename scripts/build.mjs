@@ -1,9 +1,10 @@
 import { access, cp, mkdir } from "node:fs/promises";
+import { cities } from "../src/cities.js";
 
 const root = new URL("../", import.meta.url);
 const output = new URL("dist/", root);
 await Promise.all(
-  ["taipei", "london"].flatMap((city) => ["json", "bin.gz"].map(
+  Object.keys(cities).flatMap((city) => ["json", "bin.gz"].map(
     (extension) => access(new URL(`public/data/${city}.${extension}`, root)),
   )),
 );

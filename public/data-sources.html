@@ -8,7 +8,7 @@
   </head>
   <body>
     <article class="sources">
-      <nav aria-label="Maps"><a href="./?city=taipei">Taipei map</a> · <a href="./?city=london">London map</a></nav>
+      <a href="./">Back to the map</a>
       <h1>Data and estimates</h1>
       <p>Times represent typical weekday daytime travel. Walking uses mapped streets and paths at 4.8 km/h, with a slower pace on stairs. Train waits use half the representative daytime headway. Station access and transfers include estimated walking inside stations.</p>
       <h2>Walking and basemap</h2>
@@ -24,6 +24,9 @@
       <h2 id="london">London Underground</h2>
       <p>Powered by TfL Open Data. Contains OS data © Crown copyright and database rights 2016 and Geomni UK Map data © and database rights [2019]. The station and timetable feeds are used under the <a href="https://tfl.gov.uk/corporate/terms-and-conditions/transport-data-service">TfL Transport Data Service licence</a>.</p>
       <p>Tube estimates use weekday departures from 10:00 to 16:00. Entrance coordinates come from the Department for Transport’s <a href="https://www.gov.uk/government/publications/national-public-transport-access-node-schema">NaPTAN dataset</a> under the <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/">Open Government Licence v3.0</a>. The map uses <a href="https://tfl.manglekuo.com/docs/map-geographic">Manglekuo’s OpenStreetMap-derived track centrelines</a> under the Open Database License 1.0. Download the <a href="./data/london.bin.gz">London routing database</a> and <a href="./data/london.json">map metadata</a>.</p>
+      <h2 id="guangzhou">Guangzhou Metro</h2>
+      <p>Ordered metro stops, track alignments, station exits, and walking paths come from the <a href="https://www.openstreetmap.org/relation/13123168">OpenStreetMap network</a> and the <a href="https://download.geofabrik.de/asia/china/guangdong/">Geofabrik Guangdong extract</a>. Data © OpenStreetMap contributors, available under the Open Database License 1.0. Download the <a href="./data/guangzhou.bin.gz">Guangzhou routing database</a> and <a href="./data/guangzhou.json">map metadata</a>.</p>
+      <p>Train times are estimates from track distance, assumed line speeds, and a stop allowance. Waits and transfers use assumed times. Where a mapped entrance cannot be connected to a walking path, routing uses the station centre.</p>
     </article>
   </body>
 </html>
