@@ -390,7 +390,7 @@ function addLayers() {
   map.addSource("centerpoints", {
     type: "geojson",
     data: collection(meta.centerpoints.map(({ coordinates }, index) => feature(
-      "Point", coordinates, { color: ["#bd8b0b", "#758396", "#ae6036"][index] },
+      "Point", coordinates, { color: ["#f5c418", "#adb8c6", "#dc9144"][index] },
     ))),
   });
   map.addLayer({
