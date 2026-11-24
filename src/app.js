@@ -275,6 +275,19 @@ function addLayers() {
       "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1.7, 14, 3.1],
     },
   });
+  map.addSource("centerpoints", {
+    type: "geojson",
+    data: collection(meta.centerpoints.map(({ coordinates }, index) => feature(
+      "Point", coordinates, { color: ["#bd8b0b", "#758396", "#ae6036"][index] },
+    ))),
+  });
+  map.addLayer({
+    id: "centerpoint-rings", type: "circle", source: "centerpoints",
+    paint: {
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 2.85, 15, 5.35],
+      "circle-opacity": 0, "circle-stroke-width": 2, "circle-stroke-color": ["get", "color"],
+    },
+  });
   map.addSource("stations", {
     type: "geojson",
     data: collection(meta.stations.map(({ line, name, coordinates }) => feature(
@@ -286,19 +299,6 @@ function addLayers() {
     paint: {
       "circle-color": "#fff", "circle-stroke-color": ["get", "color"], "circle-stroke-width": 1.35,
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 1.5, 15, 4],
-    },
-  });
-  map.addSource("centerpoints", {
-    type: "geojson",
-    data: collection(meta.centerpoints.map(({ coordinates }, index) => feature(
-      "Point", coordinates, { color: ["#bd8b0b", "#758396", "#ae6036"][index] },
-    ))),
-  });
-  map.addLayer({
-    id: "centerpoint-rings", type: "circle", source: "centerpoints",
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 5.5, 14, 8.5],
-      "circle-opacity": 0, "circle-stroke-width": 2.5, "circle-stroke-color": ["get", "color"],
     },
   });
   if (map.getStyle().glyphs) {
