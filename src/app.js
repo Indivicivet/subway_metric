@@ -344,7 +344,14 @@ function registerInteractions() {
     areaAt(pointer, true);
     refine = setTimeout(() => areaAt(pointer), 120);
   });
-  map.on("click", ({ lngLat }) => {
+  map.on("click", ({ point: screenPoint, lngLat }) => {
+    if (pin) {
+      const originScreen = map.project(pin.point);
+      if (Math.hypot(screenPoint.x - originScreen.x, screenPoint.y - originScreen.y) <= 12) {
+        resume();
+        return;
+      }
+    }
     if (touch.matches && pin) {
       routeAt(lngLat.toArray());
     } else {
