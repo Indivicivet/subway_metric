@@ -86,6 +86,7 @@ export class RoutingGraph {
     ));
     this.roadBuckets = new Map();
     this.cellCosts = new Uint32Array(cells * 2);
+    this.bands = new Uint8Array(cells);
     this.indexRoads();
     this.prepareCells();
   }
@@ -247,15 +248,39 @@ export class RoutingGraph {
 
   heatmap() {
     const rgba = new Uint8ClampedArray(this.cells.length * 4);
-    const { cells } = this;
+    const { cells, bands } = this;
+    const [, , , width, height] = this.meta.grid;
     for (let c = 0; c < cells.length; c++) {
-      if (cells[c] === UNREACHED) continue;
-      const color = HEAT_COLORS[Math.min(6, Math.floor(this.cellCost(c) / 6000))];
-      const index = c * 4;
-      rgba[index] = color[0];
-      rgba[index + 1] = color[1];
-      rgba[index + 2] = color[2];
-      rgba[index + 3] = color[3];
+      if (cells[c] === UNREACHED) {
+        bands[c] = 255;
+        continue;
+      }
+      const cost = this.cellCost(c);
+      bands[c] = cost >= UNREACHED ? 6 : Math.min(254, Math.floor(cost / 6000));
+    }
+    for (let y = 0, c = 0; y < height; y++) {
+      for (let x = 0; x < width; x++, c++) {
+        const band = bands[c];
+        if (band === 255) continue;
+        const edge =
+          (x > 0 && bands[c - 1] < band) ||
+          (x + 1 < width && bands[c + 1] < band) ||
+          (y > 0 && bands[c - width] < band) ||
+          (y + 1 < height && bands[c + width] < band);
+        const color = HEAT_COLORS[Math.min(6, band)];
+        const index = c * 4;
+        if (edge) {
+          rgba[index] = Math.round(color[0] * 0.74);
+          rgba[index + 1] = Math.round(color[1] * 0.74);
+          rgba[index + 2] = Math.round(color[2] * 0.74);
+          rgba[index + 3] = Math.min(255, color[3] + 26);
+        } else {
+          rgba[index] = color[0];
+          rgba[index + 1] = color[1];
+          rgba[index + 2] = color[2];
+          rgba[index + 3] = color[3];
+        }
+      }
     }
     return rgba;
   }
