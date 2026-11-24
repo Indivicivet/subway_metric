@@ -17,14 +17,19 @@ def main():
     parser.add_argument(
         "--city", choices=(*cities, *china_metro.SPECS), default="taipei"
     )
+    parser.add_argument(
+        "--all", action="store_true", help="Build every registered city"
+    )
     parser.add_argument("--cache", type=Path, default=ROOT / ".cache")
     parser.add_argument("--output", type=Path, default=ROOT / "public" / "data")
     parser.add_argument("--osm-extract", type=Path, help="Use a local regional OSM PBF")
     args = parser.parse_args()
-    if args.city in china_metro.SPECS:
-        china_metro.build(args.city, args.cache, args.output, args.osm_extract)
-    else:
-        cities[args.city].build(args.cache, args.output, args.osm_extract)
+    targets = (*cities, *china_metro.SPECS) if args.all else (args.city,)
+    for city in targets:
+        if city in china_metro.SPECS:
+            china_metro.build(city, args.cache, args.output, args.osm_extract)
+        else:
+            cities[city].build(args.cache, args.output, args.osm_extract)
 
 
 if __name__ == "__main__":

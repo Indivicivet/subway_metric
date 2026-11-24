@@ -11,9 +11,20 @@ from itertools import combinations, pairwise
 from pathlib import Path
 
 import city_bundle
+import osmium
 import shapely
 
 API = "https://api.tfl.gov.uk/Line"
+OSM_BASE = "https://download.geofabrik.de/europe/united-kingdom/england"
+OSM_REGIONS = (
+    "greater-london",
+    "berkshire",
+    "buckinghamshire",
+    "essex",
+    "hertfordshire",
+    "kent",
+    "surrey",
+)
 GEOMETRY = "https://tfl.manglekuo.com/data/geography/tube-geometry.json"
 ENTRANCES = (
     "https://naptan.api.dft.gov.uk/v1/access-nodes"
@@ -210,12 +221,45 @@ def track_paths(cache: Path):
     return paths
 
 
+def download_extract(cache: Path) -> Path:
+    extract = cache / "london.osm.pbf"
+    if extract.is_file():
+        return extract
+    cache.mkdir(parents=True, exist_ok=True)
+    parts = []
+    for region in OSM_REGIONS:
+        part = cache / f"{region}.osm.pbf"
+        if not part.is_file():
+            partial = part.with_suffix(".partial")
+            request = urllib.request.Request(
+                f"{OSM_BASE}/{region}-latest.osm.pbf",
+                headers={"User-Agent": "SubwayMetric/0.1"},
+            )
+            with urllib.request.urlopen(request, timeout=120) as response, partial.open(
+                "wb"
+            ) as target:
+                while chunk := response.read(1024 * 1024):
+                    target.write(chunk)
+            partial.replace(part)
+        parts.append(part)
+    partial = cache / "london.partial.osm.pbf"
+    partial.unlink(missing_ok=True)
+    updates = osmium.MergeInputReader()
+    for part in parts[:-1]:
+        updates.add_file(str(part))
+    reader = osmium.io.Reader(str(parts[-1]))
+    writer = osmium.io.Writer(str(partial))
+    try:
+        updates.apply_to_reader(reader, writer)
+    finally:
+        writer.close()
+        reader.close()
+    partial.replace(extract)
+    return extract
+
+
 def build(cache: Path, output: Path, custom_extract: Path | None):
-    extract = custom_extract or cache / "london.osm.pbf"
-    if not extract.is_file():
-        raise FileNotFoundError(
-            f"Provide a Greater London OSM PBF at {extract} or via --osm-extract"
-        )
+    extract = custom_extract or download_extract(cache)
     source = cache / "london"
     download(source)
     stations = {}

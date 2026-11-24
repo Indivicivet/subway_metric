@@ -1,8 +1,12 @@
+import { execFileSync } from "node:child_process";
 import { access, cp, mkdir, writeFile } from "node:fs/promises";
 import { cities } from "../src/cities.js";
 import { loadRankedCity } from "./centerpoints.mjs";
 
 const root = new URL("../", import.meta.url);
+if (process.argv.includes("--all")) {
+  execFileSync("python", ["scripts/build_city.py", "--all"], { cwd: root, stdio: "inherit" });
+}
 const output = new URL("dist/", root);
 await Promise.all(
   Object.keys(cities).flatMap((city) => ["json", "bin.gz"].map(

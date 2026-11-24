@@ -9,14 +9,11 @@ Use Node.js 22+ and Python 3.12+.
 ```sh
 npm ci
 python -m pip install -r requirements.txt
-```
-
-For each city ID in `src/cities.js`, run `python scripts/build_city.py --city <city-id>`. Adapters cache public inputs in `.cache/`. Use `--osm-extract <path>` to supply a regional OSM PBF. See [the Pages workflow](.github/workflows/pages.yml) for inputs that need local preparation.
-
-```sh
-npm run build
+npm run build -- --all
 python -m http.server 8137 --bind 127.0.0.1 --directory dist
 ```
+
+Adapters cache public inputs in `.cache/`. To build a single city instead, run `python scripts/build_city.py --city <city-id>` (with optional `--osm-extract <path>`) and `npm run build`.
 
 Open [the local map](http://127.0.0.1:8137/). Run `npm run benchmark -- <city-id>` to check sample trips and time warm heatmap computation.
 

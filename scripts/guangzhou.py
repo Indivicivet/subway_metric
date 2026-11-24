@@ -233,7 +233,7 @@ def published_entrances(stations, exits):
 
 
 def build(cache: Path, output: Path, custom_extract: Path | None):
-    extract = custom_extract or cache / "guangzhou.osm.pbf"
+    extract = custom_extract or cache / "guangdong.osm.pbf"
     if custom_extract is None and not extract.exists():
         cache.mkdir(parents=True, exist_ok=True)
         partial = extract.with_suffix(".partial")

@@ -4,6 +4,7 @@ import csv
 import itertools
 import json
 import math
+import ssl
 import unicodedata
 import urllib.request
 from collections import defaultdict
@@ -69,6 +70,9 @@ def normalized(name):
 
 def download_sources(cache: Path, custom_extract: Path | None):
     cache.mkdir(parents=True, exist_ok=True)
+    # data.taipei's CA lacks a Subject Key Identifier, rejected by Python 3.13+/OpenSSL 3.5 strict X.509 checks.
+    ssl_context = ssl.create_default_context()
+    ssl_context.verify_flags &= ~getattr(ssl, "VERIFY_X509_STRICT", 0)
     for name, url in SOURCES.items():
         if name == "taiwan.osm.pbf" and custom_extract is not None:
             continue
@@ -80,9 +84,9 @@ def download_sources(cache: Path, custom_extract: Path | None):
         request = urllib.request.Request(
             url, headers={"User-Agent": "SubwayMetric/0.1"}
         )
-        with urllib.request.urlopen(request, timeout=120) as source, partial.open(
-            "wb"
-        ) as out:
+        with urllib.request.urlopen(
+            request, timeout=120, context=ssl_context
+        ) as source, partial.open("wb") as out:
             while chunk := source.read(1024 * 1024):
                 out.write(chunk)
         partial.replace(target)
