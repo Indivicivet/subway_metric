@@ -7,13 +7,15 @@ export const ALIGHT = 5;
 export const UNREACHED = 0xffffffff;
 const BUCKET_METERS = 150;
 const HEAT_COLORS = [
-  [20, 170, 131, 136],
-  [85, 186, 123, 130],
-  [172, 200, 92, 129],
-  [239, 205, 82, 130],
-  [240, 165, 80, 127],
-  [221, 112, 100, 122],
-  [156, 135, 166, 92],
+  [10, 178, 134, 152],
+  [72, 196, 114, 146],
+  [174, 212, 62, 146],
+  [248, 206, 52, 146],
+  [248, 150, 50, 142],
+  [230, 88, 78, 138],
+  [156, 108, 186, 118],
+  [110, 104, 178, 110],
+  [92, 102, 134, 88],
 ];
 
 class CostQueue {
@@ -86,7 +88,9 @@ export class RoutingGraph {
     ));
     this.roadBuckets = new Map();
     this.cellCosts = new Uint32Array(cells * 2);
+    this.rawCellCosts = new Uint32Array(cells);
     this.bands = new Uint8Array(cells);
+    this.outBands = this.bands;
     this.indexRoads();
     this.prepareCells();
   }
@@ -246,28 +250,78 @@ export class RoutingGraph {
     );
   }
 
-  heatmap() {
-    const rgba = new Uint8ClampedArray(this.cells.length * 4);
-    const { cells, bands } = this;
+  heatmap(cutoffMinutes = 60, resolution = 1) {
+    const { cells, rawCellCosts } = this;
     const [, , , width, height] = this.meta.grid;
+    const cutoffDeci = cutoffMinutes * 600;
+    const bandFor = (cost) => {
+      if (cost >= UNREACHED) return 8;
+      if (cost < cutoffDeci) return Math.min(5, Math.floor((cost * 6) / cutoffDeci));
+      return Math.min(8, 6 + Math.floor((cost - cutoffDeci) / 12000));
+    };
     for (let c = 0; c < cells.length; c++) {
-      if (cells[c] === UNREACHED) {
-        bands[c] = 255;
-        continue;
-      }
-      const cost = this.cellCost(c);
-      bands[c] = cost >= UNREACHED ? 6 : Math.min(254, Math.floor(cost / 6000));
+      rawCellCosts[c] = cells[c] === UNREACHED ? UNREACHED : Math.min(UNREACHED, this.cellCost(c));
     }
-    for (let y = 0, c = 0; y < height; y++) {
-      for (let x = 0; x < width; x++, c++) {
-        const band = bands[c];
+
+    const scale = Math.max(1, Math.round(resolution));
+    const outW = width * scale;
+    const outH = height * scale;
+    const total = outW * outH;
+    if (this.outBands.length !== total) this.outBands = new Uint8Array(total);
+    const outBands = this.outBands;
+
+    if (scale === 1) {
+      for (let c = 0; c < cells.length; c++) {
+        outBands[c] = cells[c] === UNREACHED ? 255 : bandFor(rawCellCosts[c]);
+      }
+    } else {
+      for (let sy = 0, idx = 0; sy < outH; sy++) {
+        const fy = (sy + 0.5) / scale - 0.5;
+        const ny = Math.max(0, Math.min(height - 1, Math.round(fy)));
+        const y0 = Math.max(0, Math.floor(fy));
+        const y1 = Math.min(height - 1, y0 + 1);
+        const ty = Math.max(0, Math.min(1, fy - y0));
+        const wy0 = 1 - ty;
+        const row0 = y0 * width;
+        const row1 = y1 * width;
+        const rowN = ny * width;
+        for (let sx = 0; sx < outW; sx++, idx++) {
+          const fx = (sx + 0.5) / scale - 0.5;
+          const nx = Math.max(0, Math.min(width - 1, Math.round(fx)));
+          if (cells[rowN + nx] === UNREACHED) {
+            outBands[idx] = 255;
+            continue;
+          }
+          const x0 = Math.max(0, Math.floor(fx));
+          const x1 = Math.min(width - 1, x0 + 1);
+          const tx = Math.max(0, Math.min(1, fx - x0));
+          const wx0 = 1 - tx;
+          let sum = 0;
+          let wSum = 0;
+          const c00 = rawCellCosts[row0 + x0];
+          if (c00 < UNREACHED) { const w = wx0 * wy0; sum += w * c00; wSum += w; }
+          const c10 = rawCellCosts[row0 + x1];
+          if (c10 < UNREACHED) { const w = tx * wy0; sum += w * c10; wSum += w; }
+          const c01 = rawCellCosts[row1 + x0];
+          if (c01 < UNREACHED) { const w = wx0 * ty; sum += w * c01; wSum += w; }
+          const c11 = rawCellCosts[row1 + x1];
+          if (c11 < UNREACHED) { const w = tx * ty; sum += w * c11; wSum += w; }
+          outBands[idx] = wSum > 0 ? bandFor(sum / wSum) : 8;
+        }
+      }
+    }
+
+    const rgba = new Uint8ClampedArray(total * 4);
+    for (let y = 0, c = 0; y < outH; y++) {
+      for (let x = 0; x < outW; x++, c++) {
+        const band = outBands[c];
         if (band === 255) continue;
         const edge =
-          (x > 0 && bands[c - 1] < band) ||
-          (x + 1 < width && bands[c + 1] < band) ||
-          (y > 0 && bands[c - width] < band) ||
-          (y + 1 < height && bands[c + width] < band);
-        const color = HEAT_COLORS[Math.min(6, band)];
+          (x > 0 && outBands[c - 1] < band) ||
+          (x + 1 < outW && outBands[c + 1] < band) ||
+          (y > 0 && outBands[c - outW] < band) ||
+          (y + 1 < outH && outBands[c + outW] < band);
+        const color = HEAT_COLORS[band];
         const index = c * 4;
         if (edge) {
           rgba[index] = Math.round(color[0] * 0.74);

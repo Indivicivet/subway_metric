@@ -36,6 +36,9 @@ let pin = null;
 let refine;
 let routeFrame;
 let latestRoute;
+let snapToStation = false;
+let cutoffMinutes = 60;
+let resolution = 2;
 
 function collection(features) {
   return { type: "FeatureCollection", features };
@@ -45,18 +48,22 @@ function feature(type, coordinates, properties = {}) {
   return { type: "Feature", geometry: { type, coordinates }, properties };
 }
 
-function nearby([lon, lat]) {
+function nearestStation([lon, lat], maxMeters = 390) {
   let nearest;
-  let distance = 390 ** 2;
+  let distance = maxMeters ** 2;
   for (const station of meta.stations) {
     const [x, y] = station.coordinates;
     const candidate = ((lon - x) * meta.scale[0]) ** 2 + ((lat - y) * meta.scale[1]) ** 2;
     if (candidate < distance) {
-      nearest = station.name;
+      nearest = station;
       distance = candidate;
     }
   }
   return nearest;
+}
+
+function nearby(point) {
+  return nearestStation(point)?.name;
 }
 
 function isCovered([lon, lat]) {
@@ -122,10 +129,17 @@ function clearRoute() {
 }
 
 function drawArea(area, point, job) {
+  const [, , , width, height] = meta.grid;
+  const targetW = width * (job.resolution ?? 1);
+  const targetH = height * (job.resolution ?? 1);
+  if (canvas.width !== targetW || canvas.height !== targetH) {
+    canvas.width = targetW;
+    canvas.height = targetH;
+  }
   if (area) {
-    ctx.putImageData(new ImageData(area, canvas.width, canvas.height), 0, 0);
+    ctx.putImageData(new ImageData(area, targetW, targetH), 0, 0);
   } else {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, targetW, targetH);
   }
   const source = map.getSource("times");
   source.play();
@@ -149,8 +163,17 @@ function areaAt(point, preview = false) {
       * PREVIEW_METERS / meta.scale[i]);
   }
   const job = queued ?? running ?? lastArea;
-  if (job?.generation === generation && job.point[0] === point[0] && job.point[1] === point[1]) return;
-  queued = { id: ++sequence, generation, point, pin: Boolean(pin), requested: performance.now() };
+  if (
+    job?.generation === generation
+    && job.point[0] === point[0]
+    && job.point[1] === point[1]
+    && job.cutoff === cutoffMinutes
+    && job.resolution === resolution
+  ) return;
+  queued = {
+    id: ++sequence, generation, point, pin: Boolean(pin),
+    cutoff: cutoffMinutes, resolution, requested: performance.now(),
+  };
   sendArea();
 }
 
@@ -214,6 +237,11 @@ function registerInteractions() {
     }
     clearTimeout(refine);
     if (!isCovered(pointer)) return;
+    if (snapToStation) {
+      const snapped = nearestStation(pointer, 600)?.coordinates ?? pointer;
+      areaAt(snapped);
+      return;
+    }
     areaAt(pointer, true);
     refine = setTimeout(() => areaAt(pointer), 120);
   });
@@ -237,8 +265,8 @@ function registerInteractions() {
 
 function addLayers() {
   const [x, y, step, width, height] = meta.grid;
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = width * resolution;
+  canvas.height = height * resolution;
   const lonLat = (a, b) => [a / meta.scale[0] + meta.origin[0], b / meta.scale[1] + meta.origin[1]];
   const before = map.getStyle().layers.find((layer) => layer["source-layer"] === "transportation")?.id;
   map.addSource("times", {
@@ -285,7 +313,7 @@ function addLayers() {
     id: "centerpoint-rings", type: "circle", source: "centerpoints",
     paint: {
       "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 2.85, 15, 5.35],
-      "circle-opacity": 0, "circle-stroke-width": 2, "circle-stroke-color": ["get", "color"],
+      "circle-opacity": 0, "circle-stroke-width": 3, "circle-stroke-color": ["get", "color"],
     },
   });
   map.addSource("stations", {
@@ -430,6 +458,65 @@ citySwitch.addEventListener("change", () => {
   url.searchParams.set("city", citySwitch.value);
   location.assign(url);
 });
+function refreshArea() {
+  if (!meta || !mapReady) return;
+  const target = pin ? pin.point : (lastArea?.point ?? city.start);
+  areaAt(target);
+}
+
+function updateLegendTicks() {
+  const ticks = [
+    ...Array.from({ length: 7 }, (_, i) => String(Math.round((i * cutoffMinutes) / 6))),
+    String(cutoffMinutes + 20),
+    `${cutoffMinutes + 40}+`,
+  ];
+  document.querySelector("#legend-ticks").replaceChildren(...ticks.map((label) => {
+    const span = document.createElement("span");
+    span.textContent = label;
+    return span;
+  }));
+}
+
+function bindSliderPair(rangeId, numberId, min, max, onChange) {
+  const range = document.querySelector(rangeId);
+  const number = document.querySelector(numberId);
+  range.addEventListener("wheel", (event) => event.preventDefault(), { passive: false });
+  const apply = (raw) => {
+    const value = Math.max(min, Math.min(max, Math.round(Number(raw) || min)));
+    range.value = String(value);
+    number.value = String(value);
+    onChange(value);
+  };
+  range.addEventListener("input", () => apply(range.value));
+  number.addEventListener("change", () => apply(number.value));
+}
+
+const settingsToggle = document.querySelector("#settings-toggle");
+const settingsPanel = document.querySelector("#settings-panel");
+settingsToggle.addEventListener("click", () => {
+  const open = settingsPanel.hidden;
+  settingsPanel.hidden = !open;
+  settingsToggle.setAttribute("aria-expanded", String(open));
+});
+const snapCheckbox = document.querySelector("#snap-station");
+snapCheckbox.addEventListener("change", () => {
+  snapToStation = snapCheckbox.checked;
+  if (!pin && meta && mapReady && pointer && isCovered(pointer)) {
+    const target = snapToStation ? (nearestStation(pointer, 600)?.coordinates ?? pointer) : pointer;
+    areaAt(target);
+  }
+});
+bindSliderPair("#cutoff-range", "#cutoff-number", 30, 120, (value) => {
+  cutoffMinutes = value;
+  updateLegendTicks();
+  refreshArea();
+});
+bindSliderPair("#resolution-range", "#resolution-number", 1, 4, (value) => {
+  resolution = value;
+  refreshArea();
+});
+updateLegendTicks();
+
 document.querySelector("#time-model").textContent = city.timeLabel ?? "Typical weekday";
 document.querySelector("#credits-link").href = `./data-sources.html#${cityId}`;
 showPrompt(`Loading ${city.name} routes…`);

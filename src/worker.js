@@ -23,7 +23,7 @@ async function load() {
   self.postMessage({ type: "ready", meta: mapData, loadMs: performance.now() - started });
 }
 
-function answer({ type, id, point, pin }) {
+function answer({ type, id, point, pin, cutoff = 60, resolution = 2 }) {
   const started = performance.now();
   const snap = graph.snap(point);
   if (type === "origin") {
@@ -32,10 +32,10 @@ function answer({ type, id, point, pin }) {
       self.postMessage({ type, id, area: null });
       return;
     }
-    graph.solve(snap, pin ? undefined : 36_000);
+    graph.solve(snap, pin ? undefined : (cutoff + 40) * 600);
     if (pin) pinned = id;
-    const area = graph.heatmap();
-    self.postMessage({ type, id, area, computeMs: performance.now() - started }, [area.buffer]);
+    const area = graph.heatmap(cutoff, resolution);
+    self.postMessage({ type, id, area, cutoff, resolution, computeMs: performance.now() - started }, [area.buffer]);
   } else if (type === "route" && pinned === pin) {
     const route = snap ? graph.route(snap) : null;
     self.postMessage({ type, id, point, route });

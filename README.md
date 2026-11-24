@@ -10,7 +10,7 @@ Use Node.js 22+ and Python 3.12+.
 npm ci
 python -m pip install -r requirements.txt
 npm run build -- --all
-python -m http.server --directory dist
+python -m http.server --bind 127.0.0.1 --directory dist
 ```
 
 Adapters cache public inputs in `.cache/`. To build a single city instead, run `python scripts/build_city.py --city <city-id>` (with optional `--osm-extract <path>`) and `npm run build`.

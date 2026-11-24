@@ -14,22 +14,40 @@
     <main>
       <div id="map" aria-label="Interactive travel time map"></div>
 
-      <header class="identity" aria-label="Subway Metric">
-        <span class="identity-icon" aria-hidden="true"><i></i><i></i><i></i></span>
-        <div>
-          <strong>Subway Metric</strong>
+      <section class="trip panel" aria-label="Controls and trip details">
+        <div class="control-bar">
           <select id="city-switch" aria-label="City"></select>
+          <button id="settings-toggle" type="button" aria-expanded="false" aria-controls="settings-panel">Settings</button>
         </div>
-      </header>
 
-      <section class="trip panel" aria-label="Trip details">
+        <div id="settings-panel" class="settings" hidden>
+          <label class="setting-check">
+            <input id="snap-station" type="checkbox">
+            <span>Snap to nearby station (hover)</span>
+          </label>
+          <div class="setting-row">
+            <label for="cutoff-range">Reference time (min)</label>
+            <div class="slider-pair">
+              <input id="cutoff-range" type="range" min="30" max="120" step="5" value="60">
+              <input id="cutoff-number" type="number" min="30" max="120" step="5" value="60" aria-label="Reference time (minutes)">
+            </div>
+          </div>
+          <div class="setting-row">
+            <label for="resolution-range">Heatmap resolution (×)</label>
+            <div class="slider-pair">
+              <input id="resolution-range" type="range" min="1" max="4" step="1" value="2">
+              <input id="resolution-number" type="number" min="1" max="4" step="1" value="2" aria-label="Heatmap resolution multiplier">
+            </div>
+          </div>
+        </div>
+
         <div class="trip-heading">
           <span class="mode"><span class="mode-dot"></span><span id="mode">Explore</span></span>
           <button id="clear" type="button" hidden>Clear pin <kbd>Esc</kbd></button>
         </div>
         <div id="origin-label" class="origin-label" hidden></div>
         <div id="trip-result" aria-live="off">
-          <p id="prompt" class="prompt">Serve over HTTP instead of opening this file directly: <code>python -m http.server --directory dist</code></p>
+          <p id="prompt" class="prompt">Serve over HTTP instead of opening this file directly: <code>python -m http.server --bind 127.0.0.1 --directory dist</code></p>
           <div id="result" hidden>
             <div class="total"><span id="total"></span> <span class="minutes">min</span></div>
             <p id="destination" class="destination"></p>
@@ -44,9 +62,9 @@
           <strong>Travel time (min)</strong>
           <span id="time-model"></span>
         </div>
-        <div class="bands" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-        <div class="ticks" aria-label="0 to 60 minutes, then 60 or more">
-          <span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60+</span>
+        <div class="bands" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div id="legend-ticks" class="ticks" aria-label="Travel time scale ticks">
+          <span>0</span><span>10</span><span>20</span><span>30</span><span>40</span><span>50</span><span>60</span><span>80</span><span>100+</span>
         </div>
         <details class="credits">
           <summary>Data and estimates</summary>
