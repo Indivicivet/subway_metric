@@ -571,8 +571,8 @@ bindSliderPair("#cutoff-range", "#cutoff-number", 30, 120, 5, (value) => {
   updateLegendTicks();
   refreshArea();
 });
-bindSliderPair("#resolution-range", "#resolution-number", 1, 4, (value) => {
-  resolution = value;
+bindSliderPair("#resolution-range", "#resolution-number", 0.5, 4, 0.5, (value) => {
+  resolution = Math.max(1, Math.round(value * 2));
   refreshArea();
 });
 updateLegendTicks();
