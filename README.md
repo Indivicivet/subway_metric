@@ -10,12 +10,12 @@ Use Node.js 22+ and Python 3.12+.
 npm ci
 python -m pip install -r requirements.txt
 npm run build -- --all
-python -m http.server 8137 --bind 127.0.0.1 --directory dist
+python -m http.server --directory dist
 ```
 
 Adapters cache public inputs in `.cache/`. To build a single city instead, run `python scripts/build_city.py --city <city-id>` (with optional `--osm-extract <path>`) and `npm run build`.
 
-Open [the local map](http://127.0.0.1:8137/). Run `npm run benchmark -- <city-id>` to check sample trips and time warm heatmap computation.
+Open [the local map](http://127.0.0.1:8000/). Run `npm run benchmark -- <city-id>` to check sample trips and time warm heatmap computation.
 
 ## Travel-time estimates
 
