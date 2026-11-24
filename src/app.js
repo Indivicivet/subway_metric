@@ -48,22 +48,71 @@ function feature(type, coordinates, properties = {}) {
   return { type: "Feature", geometry: { type, coordinates }, properties };
 }
 
-function nearestStation([lon, lat], maxMeters = 390) {
-  let nearest;
-  let distance = maxMeters ** 2;
+function splitStationName(name) {
+  const match = name.match(/^(.*?)\s*\(([^()]*[\u4e00-\u9fff][^()]*)\)$/);
+  return match ? { primary: match[2].trim(), secondary: match[1].trim() } : { primary: name, secondary: null };
+}
+
+function mapLabelText(name) {
+  const { primary, secondary } = splitStationName(name);
+  return secondary ? `${primary}\n${secondary}` : primary;
+}
+
+function stationNode(name) {
+  const { primary, secondary } = splitStationName(name);
+  if (!secondary) return document.createTextNode(primary);
+  const stack = document.createElement("span");
+  stack.className = "station-stack";
+  const sub = document.createElement("span");
+  sub.className = "station-sub";
+  sub.textContent = secondary;
+  stack.append(primary, sub);
+  return stack;
+}
+
+function nearbyStations([lon, lat], maxMeters = 390, limit = 3) {
+  const limitSq = maxMeters ** 2;
+  const candidates = [];
   for (const station of meta.stations) {
     const [x, y] = station.coordinates;
-    const candidate = ((lon - x) * meta.scale[0]) ** 2 + ((lat - y) * meta.scale[1]) ** 2;
-    if (candidate < distance) {
-      nearest = station;
-      distance = candidate;
-    }
+    const distance = ((lon - x) * meta.scale[0]) ** 2 + ((lat - y) * meta.scale[1]) ** 2;
+    if (distance < limitSq) candidates.push({ station, distance });
   }
-  return nearest;
+  candidates.sort((a, b) => a.distance - b.distance);
+  const seen = new Set();
+  const result = [];
+  for (const { station } of candidates) {
+    if (seen.has(station.name)) continue;
+    seen.add(station.name);
+    result.push(station);
+    if (result.length >= limit) break;
+  }
+  return result;
+}
+
+function nearestStation(point, maxMeters = 390) {
+  return nearbyStations(point, maxMeters, 1)[0];
 }
 
 function nearby(point) {
   return nearestStation(point)?.name;
+}
+
+function updateHoverStations(point) {
+  if (pin || !meta) return;
+  const near = point && isCovered(point) ? nearbyStations(point, 800, 2) : [];
+  if (!near.length) {
+    originLabel.hidden = true;
+    originLabel.replaceChildren();
+    return;
+  }
+  originLabel.hidden = false;
+  const nodes = ["Near "];
+  near.forEach((station, index) => {
+    if (index > 0) nodes.push(", ");
+    nodes.push(stationNode(station.name));
+  });
+  originLabel.replaceChildren(...nodes);
 }
 
 function isCovered([lon, lat]) {
@@ -87,7 +136,9 @@ function showRoute(route, point) {
   document.querySelector("#total").textContent = route.total > 0 && route.total < 60
     ? "<1" : String(Math.round(route.total / 60));
   const station = nearby(point);
-  document.querySelector("#destination").textContent = station ? `To near ${station}` : "To the point on the map";
+  const destinationEl = document.querySelector("#destination");
+  if (station) destinationEl.replaceChildren("To near ", stationNode(station));
+  else destinationEl.textContent = "To the point on the map";
   const labels = {
     walk: "Walk", to: `Walk to ${city.mode}`, wait: "Wait for trains", ride: `${city.mode} ride`,
     transfer: "Walk between trains", from: "Walk to destination",
@@ -110,7 +161,7 @@ function showRoute(route, point) {
     code.style.setProperty("--line-color", meta.lines[line].color);
     code.textContent = city.shortLineLabels ? line : meta.lines[line].name;
     code.title = meta.lines[line].name;
-    item.append(code, `${board} → ${alight}`);
+    item.append(code, stationNode(board), " → ", stationNode(alight));
     return item;
   }));
   prompt.hidden = true;
@@ -188,7 +239,8 @@ function selectOrigin(point) {
   clear.hidden = false;
   originLabel.hidden = false;
   const station = nearby(point);
-  originLabel.textContent = station ? `From near ${station}` : "From the pinned point";
+  if (station) originLabel.replaceChildren("From near ", stationNode(station));
+  else originLabel.textContent = "From the pinned point";
   mark("origin", point);
   map.setPaintProperty("origin-dot", "circle-color", "#18484c");
   showPrompt(touch.matches ? "Tap a destination." : "Hover a destination to see the route.");
@@ -206,6 +258,7 @@ function resume() {
   originLabel.hidden = true;
   map.setPaintProperty("origin-dot", "circle-color", "#078572");
   showPrompt("Hover to explore. Click to pin an origin.");
+  updateHoverStations(pointer);
   areaAt(pointer && isCovered(pointer) ? pointer : city.start);
 }
 
@@ -236,7 +289,11 @@ function registerInteractions() {
       return;
     }
     clearTimeout(refine);
-    if (!isCovered(pointer)) return;
+    if (!isCovered(pointer)) {
+      updateHoverStations(null);
+      return;
+    }
+    updateHoverStations(pointer);
     if (snapToStation) {
       const snapped = nearestStation(pointer, 600)?.coordinates ?? pointer;
       areaAt(snapped);
@@ -319,7 +376,7 @@ function addLayers() {
   map.addSource("stations", {
     type: "geojson",
     data: collection(meta.stations.map(({ line, name, coordinates }) => feature(
-      "Point", coordinates, { name, color: meta.lines[line].color },
+      "Point", coordinates, { name, label: mapLabelText(name), color: meta.lines[line].color },
     ))),
   });
   map.addLayer({
@@ -331,10 +388,11 @@ function addLayers() {
   });
   if (map.getStyle().glyphs) {
     map.addLayer({
-      id: "station-labels", type: "symbol", source: "stations", minzoom: 13.35,
+      id: "station-labels", type: "symbol", source: "stations", minzoom: 12.35,
       layout: {
-        "text-field": ["get", "name"], "text-font": ["Noto Sans Regular"],
-        "text-size": 12, "text-offset": [0, .65], "text-anchor": "top",
+        "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 12.35, 15, 15, 22],
+        "text-offset": [0, .65], "text-anchor": "top",
       },
       paint: { "text-color": "#2d3f3c", "text-halo-color": "#fff", "text-halo-width": 1.4 },
     });
@@ -477,12 +535,14 @@ function updateLegendTicks() {
   }));
 }
 
-function bindSliderPair(rangeId, numberId, min, max, onChange) {
+function bindSliderPair(rangeId, numberId, min, max, step, onChange) {
   const range = document.querySelector(rangeId);
   const number = document.querySelector(numberId);
   range.addEventListener("wheel", (event) => event.preventDefault(), { passive: false });
   const apply = (raw) => {
-    const value = Math.max(min, Math.min(max, Math.round(Number(raw) || min)));
+    const parsed = Number(raw);
+    const snapped = Number.isFinite(parsed) ? Math.round(parsed / step) * step : min;
+    const value = Math.max(min, Math.min(max, Number(snapped.toFixed(2))));
     range.value = String(value);
     number.value = String(value);
     onChange(value);
@@ -506,7 +566,7 @@ snapCheckbox.addEventListener("change", () => {
     areaAt(target);
   }
 });
-bindSliderPair("#cutoff-range", "#cutoff-number", 30, 120, (value) => {
+bindSliderPair("#cutoff-range", "#cutoff-number", 30, 120, 5, (value) => {
   cutoffMinutes = value;
   updateLegendTicks();
   refreshArea();

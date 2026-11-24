@@ -122,7 +122,10 @@ kbd { font-family: inherit; font-size: .68rem; color: var(--muted); margin-left:
   padding-top: 10px;
   font-size: .875rem;
   font-weight: 620;
+  line-height: 1.35;
 }
+.station-stack { display: inline-grid; vertical-align: top; }
+.station-sub { font-size: .78em; font-weight: 500; color: var(--muted); }
 .prompt, .destination { margin: 5px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.45; }
 .origin-label:not([hidden]) + #trip-result .prompt { margin-top: 8px; }
 .total {
