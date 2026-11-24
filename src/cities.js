@@ -58,6 +58,51 @@ export const cities = {
     view: [[113.70, 22.40], [114.70, 22.95]], minZoom: 8,
     credit: "Shenzhen data and estimates", timeLabel: "Estimated weekday",
   },
+  wuhan: {
+    name: "Wuhan", mode: "Metro", start: [114.305, 30.593],
+    view: [[113.85, 30.25], [114.65, 30.85]], minZoom: 8,
+    credit: "Wuhan data and estimates", timeLabel: "Estimated weekday",
+  },
+  changsha: {
+    name: "Changsha", mode: "Metro", start: [112.979, 28.195],
+    view: [[112.75, 27.95], [113.25, 28.35]], minZoom: 8.5,
+    credit: "Changsha data and estimates", timeLabel: "Estimated weekday",
+  },
+  singapore: {
+    name: "Singapore", mode: "MRT", start: [103.851, 1.299],
+    view: [[103.62, 1.24], [104.02, 1.46]], minZoom: 9.5,
+    credit: "Singapore data and estimates", timeLabel: "Estimated weekday",
+    shortLineLabels: true,
+  },
+  seoul: {
+    name: "Seoul", mode: "Subway", start: [126.978, 37.566],
+    view: [[126.65, 37.35], [127.25, 37.75]], minZoom: 8.5,
+    credit: "Seoul data and estimates", timeLabel: "Estimated weekday",
+  },
+  tokyo: {
+    name: "Tokyo (東京)", mode: "Subway", start: [139.767, 35.681],
+    view: [[139.55, 35.55], [139.95, 35.85]], minZoom: 9,
+    credit: "Tokyo data and estimates", timeLabel: "Estimated weekday",
+    shortLineLabels: true,
+  },
+  osaka: {
+    name: "Osaka (大阪)", mode: "Metro", start: [135.498, 34.693],
+    view: [[135.38, 34.54], [135.62, 34.80]], minZoom: 9.5,
+    credit: "Osaka data and estimates", timeLabel: "Estimated weekday",
+    shortLineLabels: true,
+  },
+  nagoya: {
+    name: "Nagoya (名古屋)", mode: "Subway", start: [136.906, 35.170],
+    view: [[136.78, 35.04], [137.05, 35.28]], minZoom: 9.5,
+    credit: "Nagoya data and estimates", timeLabel: "Estimated weekday",
+    shortLineLabels: true,
+  },
+  kyoto: {
+    name: "Kyoto (京都)", mode: "Subway", start: [135.759, 35.004],
+    view: [[135.66, 34.90], [135.86, 35.10]], minZoom: 10,
+    credit: "Kyoto data and estimates", timeLabel: "Estimated weekday",
+    shortLineLabels: true,
+  },
 };
 
 export const defaultCity = "taipei";

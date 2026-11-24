@@ -11,7 +11,7 @@ const meta = JSON.parse(await readFile(new URL(`${city}.json`, data), "utf8"));
 const bytes = gunzipSync(await readFile(new URL(`${city}.bin.gz`, data)));
 const graph = new RoutingGraph(meta, bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
 
-const mainland = {
+const osmCities = {
   zhengzhou: {
     points: { "Railway": [113.6500665, 34.7473938], "East": [113.7707911, 34.7601056], "University": [113.5360877, 34.8283818], "Medical": [113.636912, 34.7486919] },
     trials: [["Railway", "East", "1"], ["Medical", "University", "1"]], home: "Railway",
@@ -40,11 +40,49 @@ const mainland = {
     points: { "Science Museum": [114.0897624, 22.5431472], "Window": [113.9692595, 22.5397676], "Futian": [114.0641051, 22.5184704], "North Station": [114.0252952, 22.6131652], "Chiwan": [113.8926904, 22.4823959] },
     trials: [["Science Museum", "Window", "1"], ["Futian", "North Station", "4"], ["Window", "Chiwan", "2;8"]], home: "Science Museum",
   },
+  wuhan: {
+    points: { "Hankou Station": [114.2546, 30.6184], "Jianghan Road": [114.2877, 30.5812], "Wuchang Station": [114.3176, 30.5284], "Optics Valley": [114.3982, 30.5065] },
+    trials: [["Hankou Station", "Optics Valley", "2"], ["Jianghan Road", "Wuchang Station"]], home: "Jianghan Road",
+  },
+  changsha: {
+    points: { "Wuyi Square": [112.9793, 28.1950], "Changsha South": [113.0652, 28.1466], "West Meixi Lake": [112.8742, 28.2036] },
+    trials: [["West Meixi Lake", "Changsha South", "2"], ["Wuyi Square", "Changsha South", "2"]], home: "Wuyi Square",
+  },
+  singapore: {
+    points: { "Dhoby Ghaut": [103.8458, 1.2989], "Raffles Place": [103.8515, 1.2839], "Jurong East": [103.7423, 1.3332], "Changi Airport": [103.9885, 1.3574] },
+    trials: [["Dhoby Ghaut", "Raffles Place", "NSL"], ["Jurong East", "Changi Airport", "EWL"]], home: "Dhoby Ghaut",
+  },
+  seoul: {
+    points: { "Seoul Station": [126.9707, 37.5547], "City Hall": [126.9771, 37.5657], "Gangnam": [127.0276, 37.4979], "Hongik Univ": [126.9237, 37.5567] },
+    trials: [["City Hall", "Gangnam", "2"], ["Seoul Station", "Hongik Univ"]], home: "City Hall",
+  },
+  tokyo: {
+    points: { "Tokyo": [139.7671, 35.6812], "Shinjuku": [139.7006, 35.6896], "Shibuya": [139.7016, 35.6580], "Asakusa": [139.7977, 35.7107] },
+    trials: [["Shibuya", "Asakusa", "G"], ["Tokyo", "Shinjuku", "M"]], home: "Tokyo",
+  },
+  osaka: {
+    points: { "Umeda": [135.4983, 34.7025], "Namba": [135.5013, 34.6666], "Tennoji": [135.5133, 34.6466] },
+    trials: [["Umeda", "Tennoji", "M"], ["Namba", "Tennoji", "M"]], home: "Umeda",
+  },
+  nagoya: {
+    points: { "Nagoya": [136.8815, 35.1709], "Sakae": [136.9086, 35.1699], "Kanayama": [136.9012, 35.1431] },
+    trials: [["Nagoya", "Sakae", "H"], ["Sakae", "Kanayama", "M"]], home: "Sakae",
+  },
+  kyoto: {
+    points: { "Kyoto": [135.7588, 34.9858], "Karasuma Oike": [135.7596, 35.0104], "Sanjo Keihan": [135.7727, 35.0091] },
+    trials: [["Kyoto", "Karasuma Oike", "K"], ["Kyoto", "Sanjo Keihan"]], home: "Karasuma Oike",
+  },
 };
-if (mainland[city]) {
+const lineCounts = { zhengzhou: 13, shanghai: 20, chongqing: 13, chengdu: 17, beijing: 26, qingdao: 8, shenzhen: 16, wuhan: 12, changsha: 7, singapore: 6, seoul: 13, tokyo: 13, osaka: 9, nagoya: 6, kyoto: 2 };
+if (osmCities[city]) {
   assert.ok(meta.stations.length > 0);
-  assert.ok(meta.stations.every(({ name }) => /\p{Script=Han}/u.test(name)), "Stations need Chinese names");
-  assert.equal(Object.keys(meta.lines).length, { zhengzhou: 13, shanghai: 20, chongqing: 13, chengdu: 17, beijing: 26, qingdao: 8, shenzhen: 16 }[city]);
+  if (["zhengzhou", "shanghai", "chongqing", "chengdu", "beijing", "qingdao", "shenzhen", "wuhan", "changsha"].includes(city)) {
+    assert.ok(meta.stations.every(({ name }) => /\p{Script=Han}/u.test(name)), "Stations need Chinese names");
+  }
+  if (["tokyo", "osaka", "nagoya", "kyoto"].includes(city)) {
+    assert.ok(meta.stations.every(({ name }) => /\p{Script=Hiragana}|\p{Script=Katakana}|\p{Script=Han}/u.test(name)), "Stations need Japanese names");
+  }
+  assert.equal(Object.keys(meta.lines).length, lineCounts[city]);
 }
 if (city === "beijing") assert.equal(meta.stations.filter(({ line }) => line === "18").length, 11);
 if (city === "chengdu") {
@@ -52,7 +90,7 @@ if (city === "chengdu") {
   assert.equal(line30.length, 22);
   assert.ok(line30.every(({ name }) => !/玉虹路|分水/.test(name)));
 }
-const points = mainland[city]?.points ?? (city === "guangzhou" ? {
+const points = osmCities[city]?.points ?? (city === "guangzhou" ? {
   "Guangzhou South": [113.2644761, 22.9917775],
   "Guangzhou Railway": [113.251255, 23.1510751],
   "Tiyu Xilu": [113.3161772, 23.1335002],
@@ -95,7 +133,7 @@ const snaps = Object.fromEntries(Object.entries(points).map(([name, point]) => {
   return [name, snap];
 }));
 
-const trials = mainland[city]?.trials ?? (city === "guangzhou" ? [
+const trials = osmCities[city]?.trials ?? (city === "guangzhou" ? [
   ["Guangzhou South", "Guangzhou Railway", "2"],
   ["Tiyu Xilu", "Airport North", "3"],
   ["Linhexi", "Canton Tower"],
@@ -128,7 +166,7 @@ for (const [from, to, line] of trials) {
   console.log(`${from} → ${to}: ${(trip.total / 60).toFixed(1)} min, ${trip.legs.map((leg) => leg.line).join(" + ") || "walk"}`);
 }
 
-const home = mainland[city]?.home ?? { taipei: "Taipei Main", london: "Charing Cross", guangzhou: "Zhujiang New Town" }[city];
+const home = osmCities[city]?.home ?? { taipei: "Taipei Main", london: "Charing Cross", guangzhou: "Zhujiang New Town" }[city];
 graph.solve(snaps[home]);
 const nearby = [points[home][0] + 0.00008, points[home][1]];
 const localTrip = graph.route(graph.snap(nearby));

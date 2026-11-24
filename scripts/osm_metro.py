@@ -1,4 +1,4 @@
-"""Build mainland metro bundles from OpenStreetMap route relations."""
+"""Build metro bundles from OpenStreetMap route relations."""
 
 import itertools
 import math
@@ -11,9 +11,24 @@ import guangzhou
 import osmium
 import shapely
 
+EXPRESS_KEYWORDS = (
+    "号线快线",
+    "快速",
+    "大站",
+    "直达",
+    "特快",
+    "急行",
+    "特急",
+    "ライナー",
+    "エアポート快特",
+    "급행",
+    "특급",
+)
+
 SPECS = {
     "zhengzhou": {
-        "region": "henan",
+        "region": "asia/china/henan",
+        "lang": "zh",
         "origin": (113.65, 34.75),
         "bounds": (112.95, 33.95, 114.25, 35.05),
         "masters": [
@@ -33,7 +48,8 @@ SPECS = {
         ],
     },
     "shanghai": {
-        "region": "shanghai",
+        "region": "asia/china/shanghai",
+        "lang": "zh",
         "origin": (121.47, 31.23),
         "bounds": (120.90, 30.72, 122.00, 31.72),
         "masters": [
@@ -60,7 +76,8 @@ SPECS = {
         ],
     },
     "chongqing": {
-        "region": "chongqing",
+        "region": "asia/china/chongqing",
+        "lang": "zh",
         "origin": (106.55, 29.56),
         "bounds": (105.95, 29.05, 107.00, 30.15),
         "masters": [
@@ -80,7 +97,8 @@ SPECS = {
         ],
     },
     "chengdu": {
-        "region": "sichuan",
+        "region": "asia/china/sichuan",
+        "lang": "zh",
         "origin": (104.06, 30.66),
         "bounds": (103.65, 30.05, 104.85, 31.05),
         "masters": [
@@ -104,7 +122,8 @@ SPECS = {
         ],
     },
     "beijing": {
-        "region": "hebei",
+        "region": "asia/china/hebei",
+        "lang": "zh",
         "origin": (116.40, 39.90),
         "bounds": (115.75, 39.35, 117.15, 40.35),
         "masters": [
@@ -137,7 +156,8 @@ SPECS = {
         ],
     },
     "qingdao": {
-        "region": "shandong",
+        "region": "asia/china/shandong",
+        "lang": "zh",
         "origin": (120.38, 36.07),
         "bounds": (119.65, 35.50, 121.10, 36.65),
         "masters": [
@@ -152,7 +172,8 @@ SPECS = {
         ],
     },
     "shenzhen": {
-        "region": "guangdong",
+        "region": "asia/china/guangdong",
+        "lang": "zh",
         "origin": (114.06, 22.55),
         "bounds": (113.70, 22.40, 114.70, 22.95),
         "masters": [
@@ -172,6 +193,139 @@ SPECS = {
             14764338,
             15059918,
             13620411,
+        ],
+    },
+    "wuhan": {
+        "region": "asia/china/hubei",
+        "lang": "zh",
+        "origin": (114.305, 30.593),
+        "bounds": (113.85, 30.25, 114.65, 30.85),
+        "masters": [
+            8309087,
+            9592190,
+            9588292,
+            9633082,
+            13647962,
+            9617440,
+            9617441,
+            7964884,
+            9633134,
+            20622654,
+            13648363,
+            9765661,
+        ],
+    },
+    "changsha": {
+        "region": "asia/china/hunan",
+        "lang": "zh",
+        "origin": (112.979, 28.195),
+        "bounds": (112.75, 27.95, 113.25, 28.35),
+        "masters": [
+            7875257,
+            7875250,
+            11257190,
+            16103884,
+            9632502,
+            11257230,
+            14303415,
+        ],
+    },
+    "singapore": {
+        "region": "asia/malaysia-singapore-brunei",
+        "lang": "en",
+        "origin": (103.851, 1.299),
+        "bounds": (103.62, 1.24, 104.02, 1.46),
+        "masters": [
+            7695961,  # NSL
+            7981689,  # EWL
+            7981649,  # NEL
+            7981685,  # CCL
+            7981644,  # DTL
+            9627860,  # TEL
+        ],
+    },
+    "seoul": {
+        "region": "asia/south-korea",
+        "lang": "ko",
+        "origin": (126.978, 37.566),
+        "bounds": (126.65, 37.35, 127.25, 37.75),
+        "route_types": {"subway", "light_rail", "monorail", "train"},
+        "masters": [
+            8691899,  # Line 1
+            7625892,  # Line 2
+            7879839,  # Line 3
+            7625893,  # Line 4
+            7879871,  # Line 5
+            7919154,  # Line 6
+            7922930,  # Line 7
+            7919019,  # Line 8
+            7883317,  # Line 9
+            7728256,  # Shinbundang
+            11619514,  # Suin-Bundang
+            7533584,  # Ui-Sinseol
+            14191878,  # Sillim
+        ],
+    },
+    "tokyo": {
+        "region": "asia/japan/kanto",
+        "lang": "ja",
+        "origin": (139.767, 35.681),
+        "bounds": (139.55, 35.55, 139.95, 35.85),
+        "masters": [
+            8026077,  # Ginza (G)
+            8015940,  # Marunouchi (M)
+            8026149,  # Hibiya (H)
+            8026124,  # Tozai (T)
+            8026069,  # Chiyoda (C)
+            8026115,  # Yurakucho (Y)
+            8026157,  # Hanzomon (Z)
+            8026071,  # Namboku (N)
+            8026161,  # Fukutoshin (F)
+            8019854,  # Asakusa (A)
+            8019914,  # Mita (I)
+            8019866,  # Shinjuku (S)
+            8019893,  # Oedo (E)
+        ],
+    },
+    "osaka": {
+        "region": "asia/japan/kansai",
+        "lang": "ja",
+        "origin": (135.498, 34.693),
+        "bounds": (135.38, 34.54, 135.62, 34.80),
+        "masters": [
+            8028805,  # Midosuji (M)
+            8028879,  # Tanimachi (T)
+            8028853,  # Yotsubashi (Y)
+            8028811,  # Chuo (C)
+            8028801,  # Sennichimae (S)
+            8028828,  # Sakaisuji (K)
+            8028846,  # Nagahori Tsurumi-ryokuchi (N)
+            8028826,  # Imazatosuji (I)
+            9603949,  # Nanko Port Town (P)
+        ],
+    },
+    "nagoya": {
+        "region": "asia/japan/chubu",
+        "lang": "ja",
+        "origin": (136.906, 35.170),
+        "bounds": (136.78, 35.04, 137.05, 35.28),
+        "masters": [
+            8030765,  # Higashiyama (H)
+            8031607,  # Meijo (M)
+            8030779,  # Meiko (E)
+            8030785,  # Tsurumai (T)
+            8030762,  # Sakura-dori (S)
+            7712576,  # Kamiiida (K)
+        ],
+    },
+    "kyoto": {
+        "region": "asia/japan/kansai",
+        "lang": "ja",
+        "origin": (135.759, 35.004),
+        "bounds": (135.66, 34.90, 135.86, 35.10),
+        "masters": [
+            8030551,  # Karasuma (K)
+            8030553,  # Tozai (T)
         ],
     },
 }
@@ -223,12 +377,12 @@ CHENGDU_30_STOPS = (
 
 
 def download_extract(cache: Path, region: str) -> Path:
-    extract = cache / f"{region}.osm.pbf"
+    extract = cache / f"{Path(region).name}.osm.pbf"
     if not extract.exists():
         cache.mkdir(parents=True, exist_ok=True)
         partial = extract.with_suffix(".partial")
         with urllib.request.urlopen(
-            f"https://download.geofabrik.de/asia/china/{region}-latest.osm.pbf",
+            f"https://download.geofabrik.de/{region}-latest.osm.pbf",
             timeout=120,
         ) as source, partial.open("wb") as target:
             while chunk := source.read(1024 * 1024):
@@ -237,15 +391,60 @@ def download_extract(cache: Path, region: str) -> Path:
     return extract
 
 
+def station_names(tags, lang: str) -> tuple[str, str] | None:
+    if lang == "zh":
+        local = tags.get("name:zh-Hans") or tags.get("name:zh") or tags.get("name")
+        if not local:
+            return None
+        clean = local.removesuffix("站")
+        english = tags.get("name:en")
+        label = f"{english} ({local})" if english and english != local else local
+        return clean, label
+    if lang == "ja":
+        local = tags.get("name:ja") or tags.get("name")
+        if not local:
+            return None
+        clean = local.removesuffix("駅")
+        english = tags.get("name:en")
+        label = f"{english} ({local})" if english and english != local else local
+        return clean, label
+    if lang == "ko":
+        local = tags.get("name:ko") or tags.get("name")
+        if not local:
+            return None
+        clean = local.removesuffix("역")
+        english = tags.get("name:en")
+        label = f"{english} ({local})" if english and english != local else local
+        return clean, label
+    local = tags.get("name:en") or tags.get("name")
+    if not local:
+        return None
+    return local, local
+
+
+def line_label(tags, ref: str, lang: str) -> str:
+    if lang == "zh":
+        return f"Line {ref}"
+    local = tags.get("name")
+    english = tags.get("name:en")
+    if lang == "ja" and local:
+        return f"{english} ({local})" if english and english != local else local
+    if english:
+        return english
+    return local or f"Line {ref}"
+
+
 def build(city: str, cache: Path, output: Path, custom_extract: Path | None):
     spec = SPECS[city]
+    lang = spec["lang"]
+    route_types = spec.get("route_types", {"subway", "light_rail", "monorail"})
     area = city_bundle.MapArea(
         city, spec["origin"], spec["bounds"], 0.04, 200, min_component=12
     )
     extract = custom_extract or download_extract(cache, spec["region"])
     if city == "shanghai" and custom_extract is None:
         # Line 11 extends into Jiangsu; include its stops and walking network.
-        jiangsu = download_extract(cache, "jiangsu")
+        jiangsu = download_extract(cache, "asia/china/jiangsu")
         merged = cache / "shanghai-jiangsu.osm.pbf"
         if not merged.exists() or merged.stat().st_mtime < max(
             extract.stat().st_mtime, jiangsu.stat().st_mtime
@@ -266,13 +465,11 @@ def build(city: str, cache: Path, output: Path, custom_extract: Path | None):
 
     print(f"Reading {city} route relations", flush=True)
     relations = {}
+    tag_filters = [("type", "route_master")] + [
+        ("route", route_type) for route_type in sorted(route_types)
+    ]
     for relation in osmium.FileProcessor(extract, osmium.osm.RELATION).with_filter(
-        osmium.filter.TagFilter(
-            ("type", "route_master"),
-            ("route", "subway"),
-            ("route", "light_rail"),
-            ("route", "monorail"),
-        )
+        osmium.filter.TagFilter(*tag_filters)
     ):
         relations[relation.id] = (
             dict(relation.tags),
@@ -285,17 +482,17 @@ def build(city: str, cache: Path, output: Path, custom_extract: Path | None):
             raise ValueError(f"Missing route master {master} in {extract}")
         tags, members = relations[master]
         line = tags.get("ref") or str(master)
-        lines[line] = (f"Line {line}", tags.get("colour", "#555555"))
+        lines[line] = (
+            line_label(tags, line, lang),
+            tags.get("colour", "#555555"),
+        )
         for kind, ref, _ in members:
             if kind != "r" or ref not in relations:
                 continue
             route, children = relations[ref]
-            if route.get("route") not in {"subway", "light_rail", "monorail"}:
+            if route.get("route") not in route_types:
                 continue
-            if any(
-                word in route.get("name", "")
-                for word in ("号线快线", "快速", "大站", "直达", "特快")
-            ):
+            if any(word in route.get("name", "") for word in EXPRESS_KEYWORDS):
                 continue
             stops = [
                 ref
@@ -336,33 +533,18 @@ def build(city: str, cache: Path, output: Path, custom_extract: Path | None):
     for obj in processor:
         if obj.is_node():
             if obj.id in stop_ids:
-                name = (
-                    obj.tags.get("name:zh-Hans")
-                    or obj.tags.get("name:zh")
-                    or obj.tags.get("name")
-                )
-                if name:
-                    english = obj.tags.get("name:en")
-                    nodes[obj.id] = (
-                        area.project(obj.lon, obj.lat),
-                        name.removesuffix("站"),
-                        f"{english} ({name})" if english and english != name else name,
-                    )
+                names = station_names(obj.tags, lang)
+                if names:
+                    nodes[obj.id] = (area.project(obj.lon, obj.lat), *names)
                 else:
                     unnamed[obj.id] = area.project(obj.lon, obj.lat)
             if (
                 obj.tags.get("railway") == "station"
                 and obj.tags.get("station") == "subway"
             ):
-                name = (
-                    obj.tags.get("name:zh-Hans")
-                    or obj.tags.get("name:zh")
-                    or obj.tags.get("name")
-                )
-                if name:
-                    named_stations.append(
-                        (area.project(obj.lon, obj.lat), name, obj.tags.get("name:en"))
-                    )
+                names = station_names(obj.tags, lang)
+                if names:
+                    named_stations.append((area.project(obj.lon, obj.lat), *names))
             if obj.tags.get("railway") == "subway_entrance" and obj.tags.get(
                 "access"
             ) not in {"no", "private"}:
@@ -386,12 +568,8 @@ def build(city: str, cache: Path, output: Path, custom_extract: Path | None):
                 )
             ]
             if len({name for _, name, _ in matches}) == 1:
-                _, name, english = matches[0]
-                nodes[stop] = (
-                    point,
-                    name.removesuffix("站"),
-                    f"{english} ({name})" if english and english != name else name,
-                )
+                _, clean, label = matches[0]
+                nodes[stop] = (point, clean, label)
 
     grouped, stations, paths, patterns = defaultdict(list), {}, {}, defaultdict(set)
     missing = set()

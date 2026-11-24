@@ -34,9 +34,9 @@ jobs:
       - run: npm run benchmark
       - run: npm run benchmark -- london
       - run: npm run benchmark -- guangzhou
-      - name: Check mainland metro bundles
+      - name: Check OSM metro bundles
         run: |
-          for city in zhengzhou shanghai chongqing chengdu beijing qingdao shenzhen; do
+          for city in zhengzhou shanghai chongqing chengdu beijing qingdao shenzhen wuhan changsha singapore seoul tokyo osaka nagoya kyoto; do
             npm run benchmark -- "$city"
           done
       - run: npm run build
