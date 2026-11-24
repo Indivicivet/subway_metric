@@ -1,4 +1,4 @@
-import { RoutingGraph } from "./routing.js";
+import { RoutingGraph } from "./routing.js?v=2";
 
 let graph;
 let pinned;

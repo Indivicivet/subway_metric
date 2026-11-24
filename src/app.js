@@ -21,6 +21,7 @@ const ctx = canvas.getContext("2d");
 const touch = matchMedia("(hover: none)");
 const workerUrl = new URL("./worker.js", import.meta.url);
 workerUrl.searchParams.set("city", cityId);
+workerUrl.searchParams.set("v", "2");
 const worker = new Worker(workerUrl, { type: "module" });
 let map;
 let meta;
@@ -165,31 +166,45 @@ function showRoute(route, point) {
   const destinationEl = document.querySelector("#destination");
   if (station) destinationEl.replaceChildren("To near ", stationNode(station));
   else destinationEl.textContent = "To the point on the map";
-  const labels = {
-    walk: "Walk", to: `Walk to ${city.mode}`, wait: "Wait for trains", ride: `${city.mode} ride`,
-    transfer: "Walk between trains", from: "Walk to destination",
+  const formatTime = (time = 0) => (time > 0 && time < 60 ? "<1 min" : `${Math.round(time / 60)} min`);
+  const addRow = (termContent, time, color) => {
+    const row = document.createElement("div");
+    if (color) {
+      row.className = "leg-row";
+      row.style.setProperty("--line-color", color);
+    }
+    const term = document.createElement("dt");
+    if (Array.isArray(termContent)) term.append(...termContent);
+    else term.textContent = termContent;
+    const value = document.createElement("dd");
+    value.textContent = formatTime(time);
+    row.append(term, value);
+    return row;
   };
-  breakdown.replaceChildren(...Object.entries(route.times)
-    .filter(([name, time]) => time !== 0 || name === "walk")
-    .map(([name, time]) => {
-      const row = document.createElement("div");
-      const term = document.createElement("dt");
-      const value = document.createElement("dd");
-      term.textContent = labels[name];
-      value.textContent = time > 0 && time < 60 ? "<1 min" : `${Math.round(time / 60)} min`;
-      row.append(term, value);
-      return row;
-    }));
-  legs.replaceChildren(...route.legs.map(({ line, board, alight }) => {
-    const item = document.createElement("li");
-    const code = document.createElement("span");
-    code.className = "line-code";
-    code.style.setProperty("--line-color", meta.lines[line].color);
-    code.textContent = city.shortLineLabels ? line : meta.lines[line].name;
-    code.title = meta.lines[line].name;
-    item.append(code, stationNode(board), " → ", stationNode(alight));
-    return item;
-  }));
+  const rows = [];
+  if (route.legs.length === 0) {
+    rows.push(addRow("Walk", route.times.walk ?? 0));
+  } else {
+    if (route.times.to) rows.push(addRow(`Walk to ${city.mode}`, route.times.to));
+    if (route.times.wait) rows.push(addRow("Wait for trains", route.times.wait));
+    route.legs.forEach(({ line, board, alight, time, transferAfter }, index) => {
+      const code = document.createElement("span");
+      code.className = "line-code";
+      code.style.setProperty("--line-color", meta.lines[line].color);
+      code.textContent = city.shortLineLabels ? line : meta.lines[line].name;
+      code.title = meta.lines[line].name;
+      const stationsWrap = document.createElement("span");
+      stationsWrap.className = "leg-stations";
+      stationsWrap.append(stationNode(board), " → ", stationNode(alight));
+      rows.push(addRow([code, stationsWrap], time, meta.lines[line].color));
+      if (index < route.legs.length - 1 && transferAfter > 0) {
+        rows.push(addRow("Walk between trains", transferAfter));
+      }
+    });
+    if (route.times.from) rows.push(addRow("Walk to destination", route.times.from));
+  }
+  breakdown.replaceChildren(...rows);
+  legs.replaceChildren();
   prompt.hidden = true;
   summary.hidden = false;
 }

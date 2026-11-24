@@ -149,7 +149,16 @@ kbd { font-family: inherit; font-size: .68rem; color: var(--muted); margin-left:
 }
 .breakdown div { display: contents; }
 .breakdown dt { color: var(--muted); }
-.breakdown dd { margin: 0; font-weight: 670; font-variant-numeric: tabular-nums; }
+.breakdown dd { margin: 0; font-weight: 670; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.breakdown .leg-row dt {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #183334;
+  border-left: 3px solid var(--line-color);
+  padding-left: 6px;
+}
+.breakdown .leg-stations { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3px; font-size: .8rem; line-height: 1.25; }
 .lines-used {
   display: grid;
   gap: 6px;

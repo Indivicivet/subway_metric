@@ -401,11 +401,12 @@ export class RoutingGraph {
         if (walk.length > 1) features.push(routeFeature("walk", "", walk));
         walk = [];
         if (!train) {
-          train = { line, board, alight, stops: 0 };
+          train = { line, board, alight, stops: 0, time: 0, transferAfter: 0 };
           legs.push(train);
         }
         train.alight = alight;
         train.stops++;
+        train.time += costs[edge];
         const shape = meta.shapes[shapeId].coordinates;
         features.push(routeFeature("ride", meta.lines[line].color, [
           this.nodeCoordinate(from),
@@ -415,7 +416,11 @@ export class RoutingGraph {
       } else if (kind === ALIGHT) {
         train = null;
       } else {
-        if (usesMrt) times[index < firstTrain ? "to" : index > lastTrain ? "from" : "transfer"] += costs[edge];
+        if (usesMrt) {
+          const bucket = index < firstTrain ? "to" : index > lastTrain ? "from" : "transfer";
+          times[bucket] += costs[edge];
+          if (bucket === "transfer" && legs.length) legs[legs.length - 1].transferAfter += costs[edge];
+        }
         if (walk.length === 0) walk.push(this.nodeCoordinate(from));
         walk.push(this.nodeCoordinate(to));
       }
@@ -424,6 +429,10 @@ export class RoutingGraph {
     walk.push(goal.coordinate, goal.point);
     features.push(routeFeature("walk", "", walk));
     for (const key of Object.keys(times)) times[key] /= 10;
+    for (const leg of legs) {
+      leg.time /= 10;
+      leg.transferAfter /= 10;
+    }
     return { total: total / 10, times, legs, features };
   }
 }
