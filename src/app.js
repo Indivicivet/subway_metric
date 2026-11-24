@@ -98,9 +98,28 @@ function nearby(point) {
   return nearestStation(point)?.name;
 }
 
+function setActiveMapLabels(stations) {
+  const source = map?.getSource("active-station-labels");
+  if (!source) return;
+  const seen = new Set();
+  const features = [];
+  for (const station of stations) {
+    if (!station || seen.has(station.name)) continue;
+    seen.add(station.name);
+    features.push(feature("Point", station.coordinates, { label: mapLabelText(station.name) }));
+  }
+  source.setData(collection(features));
+}
+
+function stationByLineAndName(line, name) {
+  return meta.stations.find((s) => s.line === line && s.name === name)
+    ?? meta.stations.find((s) => s.name === name);
+}
+
 function updateHoverStations(point) {
   if (pin || !meta) return;
   const near = point && isCovered(point) ? nearbyStations(point, 800, 2) : [];
+  setActiveMapLabels(near);
   if (!near.length) {
     originLabel.hidden = true;
     originLabel.replaceChildren();
@@ -130,9 +149,16 @@ function showRoute(route, point) {
   map.getSource("route").setData(collection(route?.features ?? []));
   mark("destination", route ? point : null);
   if (route === null) {
+    setActiveMapLabels([nearestStation(pin.point)]);
     showPrompt("No mapped walking connection to this point.");
     return;
   }
+  const routeStations = [nearestStation(pin.point)];
+  for (const { line, board, alight } of route.legs) {
+    routeStations.push(stationByLineAndName(line, board), stationByLineAndName(line, alight));
+  }
+  routeStations.push(nearestStation(point));
+  setActiveMapLabels(routeStations);
   document.querySelector("#total").textContent = route.total > 0 && route.total < 60
     ? "<1" : String(Math.round(route.total / 60));
   const station = nearby(point);
@@ -238,8 +264,9 @@ function selectOrigin(point) {
   mode.textContent = "Origin pinned";
   clear.hidden = false;
   originLabel.hidden = false;
-  const station = nearby(point);
-  if (station) originLabel.replaceChildren("From near ", stationNode(station));
+  const station = nearestStation(point);
+  setActiveMapLabels([station]);
+  if (station) originLabel.replaceChildren("From near ", stationNode(station.name));
   else originLabel.textContent = "From the pinned point";
   mark("origin", point);
   map.setPaintProperty("origin-dot", "circle-color", "#18484c");
@@ -395,6 +422,19 @@ function addLayers() {
         "text-offset": [0, .65], "text-anchor": "top",
       },
       paint: { "text-color": "#2d3f3c", "text-halo-color": "#fff", "text-halo-width": 1.4 },
+    });
+  }
+  map.addSource("active-station-labels", { type: "geojson", data: EMPTY });
+  if (map.getStyle().glyphs) {
+    map.addLayer({
+      id: "active-station-labels", type: "symbol", source: "active-station-labels",
+      layout: {
+        "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"],
+        "text-size": ["interpolate", ["linear"], ["zoom"], 10, 14, 15, 22],
+        "text-offset": [0, .65], "text-anchor": "top",
+        "text-allow-overlap": true,
+      },
+      paint: { "text-color": "#143e42", "text-halo-color": "#fff", "text-halo-width": 2 },
     });
   }
   map.addSource("route", { type: "geojson", data: EMPTY });
